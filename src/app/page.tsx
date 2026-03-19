@@ -1,65 +1,64 @@
-import Image from "next/image";
-
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div className="min-h-screen bg-[var(--canvas)] px-5 py-8 sm:px-8">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 rounded-[36px] border border-white/50 bg-white/72 p-8 shadow-[0_28px_90px_rgba(28,40,82,0.14)] backdrop-blur">
+        <div className="max-w-3xl">
+          <p className="font-mono text-xs uppercase tracking-[0.35em] text-[var(--accent-strong)]">
+            Cryptography Learning Pilot
+          </p>
+          <h1 className="mt-4 text-4xl font-semibold tracking-tight text-[var(--ink)] sm:text-6xl">
+            Modular study shell first, gameplay later.
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="mt-5 max-w-2xl text-base leading-8 text-[var(--ink-muted)]">
+            This build prioritizes the research pipeline: invite token resolution, consent,
+            pre and post assessment, survey capture, event logging, and admin export.
+            The three puzzle levels stay deferred until you review the infrastructure.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="rounded-[30px] border border-[var(--border)] bg-[var(--card)]/70 p-6">
+            <h2 className="text-xl font-semibold text-[var(--ink)]">Current build scope</h2>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              {[
+                "Token-gated participant entry",
+                "Consent and session creation",
+                "3-item pre-test",
+                "Reserved gameplay transition slot",
+                "3-item post-test",
+                "Survey and thank-you flow",
+                "Event ingestion API",
+                "Admin invite and export console",
+              ].map((item) => (
+                <div
+                  key={item}
+                  className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3 text-sm text-[var(--ink-muted)]"
+                >
+                  {item}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-[30px] border border-[var(--border)] bg-[#16325b] p-6 text-white">
+            <p className="font-mono text-xs uppercase tracking-[0.3em] text-[#d7e6ff]">
+              Routes
+            </p>
+            <div className="mt-5 space-y-3 text-sm">
+              <a
+                href="/start"
+                className="block rounded-2xl bg-white/10 px-4 py-3 transition hover:bg-white/16"
+              >
+                Participant entry at <span className="font-mono">/start</span>
+              </a>
+              <a
+                href="/admin"
+                className="block rounded-2xl bg-white/10 px-4 py-3 transition hover:bg-white/16"
+              >
+                Admin console at <span className="font-mono">/admin</span>
+              </a>
+            </div>
+          </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
