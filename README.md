@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Cybersecurity Game Pilot
 
-## Getting Started
+A modular Next.js pilot build for a cryptography education study. This phase intentionally implements the study shell before the gameplay module.
 
-First, run the development server:
+## Current Scope
+
+- invite token resolution and dev bypass
+- consent and session creation
+- 3-item pre-test
+- reserved gameplay placeholder step
+- 3-item post-test
+- perception survey
+- Mongo-backed event and session storage
+- admin invite generation and raw or analysis exports
+
+## Stack
+
+- Next.js App Router
+- TypeScript
+- Tailwind CSS
+- MongoDB
+
+## Environment
+
+Copy `.env.example` to `.env.local` and set:
+
+- `MONGODB_URI`
+- `MONGODB_DB_NAME`
+- `ADMIN_SECRET`
+- `APP_BASE_URL`
+- `NEXT_PUBLIC_ENABLE_DEV_BYPASS`
+
+## Local Run
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Participant flow starts at `http://localhost:3000/start`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Admin flow starts at `http://localhost:3000/admin`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Study Flow
 
-## Learn More
+1. Resolve invite token from `/start?token=...`
+2. Collect consent and participant profile fields
+3. Run the 3-item pre-test
+4. Hold a reserved slot for the future gameplay module
+5. Run the 3-item post-test
+6. Collect the short survey
+7. Mark the session complete and expose data through admin export
 
-To learn more about Next.js, take a look at the following resources:
+## Modular Structure
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `src/modules/invites` token lookup and invite creation
+- `src/modules/study` study flow state and persistence
+- `src/modules/instrumentation` event logging and indexes
+- `src/modules/admin` admin auth, summary counts, exports
+- `src/modules/game` gameplay stub for the later level work
+- `src/lib` Mongo and utility helpers
+- `src/config` study content and runtime config
+- `src/types` shared contracts
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Notes
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Invite email records remain separate from participant gameplay data.
+- The gameplay levels, hints, and Codex are deliberately deferred until the study infrastructure is reviewed.
