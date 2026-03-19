@@ -39,6 +39,16 @@ export const studyEventNames = [
 ] as const;
 
 export const assessmentPhases = ["pre", "post"] as const;
+export const levelIds = [
+  "caesar-cipher",
+  "xor-stream",
+  "block-cipher",
+] as const;
+export const codexEntryIds = [
+  "caesar-cipher",
+  "xor-stream",
+  "block-cipher",
+] as const;
 
 export const deviceTypes = ["phone", "tablet", "laptop", "desktop", "unknown"] as const;
 export const inputTypes = ["touch", "mouse-keyboard", "unknown"] as const;
@@ -48,6 +58,8 @@ export type LikertScore = (typeof likertOptions)[number];
 export type StudyStep = (typeof studySteps)[number];
 export type StudyEventName = (typeof studyEventNames)[number];
 export type AssessmentPhase = (typeof assessmentPhases)[number];
+export type LevelId = (typeof levelIds)[number];
+export type CodexEntryId = (typeof codexEntryIds)[number];
 export type DeviceType = (typeof deviceTypes)[number];
 export type InputType = (typeof inputTypes)[number];
 

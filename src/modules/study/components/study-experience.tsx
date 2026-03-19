@@ -6,8 +6,8 @@ import { assessmentItems, likertLabels, priorExperienceLabels, studyCopy, studyS
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SiteShell } from "@/components/layout/site-shell";
+import { GameplayExperience } from "@/modules/game";
 import { sendStudyEvent } from "@/modules/instrumentation/client";
-import { gameplayModuleStatus } from "@/modules/game";
 import {
   priorCryptoExperienceOptions,
   studySteps,
@@ -608,28 +608,14 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
 
     if (currentStep === "game-placeholder") {
       return (
-        <Card className="p-8">
-          <div className="space-y-5">
-            <p className="font-mono text-xs uppercase tracking-[0.3em] text-[var(--accent-strong)]">
-              Gameplay reserved
-            </p>
-            <h2 className="text-2xl font-semibold text-[var(--ink)]">
-              Non-game pilot infrastructure is ready
-            </h2>
-            <p className="text-[var(--ink-muted)]">{studyCopy.placeholderMessage}</p>
-            <div className="rounded-[24px] border border-dashed border-[var(--border-strong)] bg-[var(--card)]/75 p-5">
-              <p className="font-medium text-[var(--ink)]">Current gameplay status</p>
-              <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
-                {gameplayModuleStatus.message}
-              </p>
-            </div>
-            <div className="flex justify-end">
-              <Button onClick={() => setCurrentStep("posttest")}>
-                Continue to post-test
-              </Button>
-            </div>
-          </div>
-        </Card>
+        <GameplayExperience
+          participantId={participantId}
+          sessionId={sessionId ?? ""}
+          onComplete={() => {
+            setCurrentStep("posttest");
+            setFeedback(null);
+          }}
+        />
       );
     }
 
