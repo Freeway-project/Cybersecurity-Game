@@ -153,10 +153,10 @@ export interface AssessmentRecord {
 
 export interface SurveyRecord {
   participantId: string;
-  helpfulScore: LikertScore;
-  hintsScore: LikertScore;
-  engagementScore: LikertScore;
-  reuseScore: LikertScore;
+  helpfulScore?: LikertScore;
+  hintsScore?: LikertScore;
+  engagementScore?: LikertScore;
+  reuseScore?: LikertScore;
   helpfulComment?: string;
   confusingComment?: string;
   submittedAt: Date;
@@ -203,10 +203,10 @@ export interface AssessmentResponse {
 export interface SurveySubmission {
   participantId: string;
   sessionId: string;
-  helpfulScore: LikertScore;
-  hintsScore: LikertScore;
-  engagementScore: LikertScore;
-  reuseScore: LikertScore;
+  helpfulScore?: LikertScore;
+  hintsScore?: LikertScore;
+  engagementScore?: LikertScore;
+  reuseScore?: LikertScore;
   helpfulComment?: string;
   confusingComment?: string;
 }

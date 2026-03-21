@@ -44,10 +44,10 @@ const assessmentSchema = z.object({
 const surveySchema = z.object({
   participantId: z.string().min(1),
   sessionId: z.string().min(1),
-  helpfulScore: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]),
-  hintsScore: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]),
-  engagementScore: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]),
-  reuseScore: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]),
+  helpfulScore: z.coerce.number().int().min(1).max(5).optional(),
+  hintsScore: z.coerce.number().int().min(1).max(5).optional(),
+  engagementScore: z.coerce.number().int().min(1).max(5).optional(),
+  reuseScore: z.coerce.number().int().min(1).max(5).optional(),
   helpfulComment: z.string().trim().max(1200).optional(),
   confusingComment: z.string().trim().max(1200).optional(),
 });
@@ -205,23 +205,33 @@ export async function submitSurvey(rawInput: unknown, userAgent: string | null) 
   await ensureStudyIndexes();
   const input = surveySchema.parse(rawInput);
   const db = await getMongoDb();
-
-  const surveyRecord: SurveyRecord = {
-    participantId: input.participantId,
-    helpfulScore: input.helpfulScore,
-    hintsScore: input.hintsScore,
-    engagementScore: input.engagementScore,
-    reuseScore: input.reuseScore,
-    helpfulComment: input.helpfulComment,
-    confusingComment: input.confusingComment,
-    submittedAt: new Date(),
-  };
-
-  await db.collection<SurveyRecord>("surveys").updateOne(
-    { participantId: input.participantId },
-    { $set: surveyRecord },
-    { upsert: true },
+  const hasSurveyContent = Boolean(
+    input.helpfulScore ??
+      input.hintsScore ??
+      input.engagementScore ??
+      input.reuseScore ??
+      input.helpfulComment ??
+      input.confusingComment,
   );
+
+  if (hasSurveyContent) {
+    const surveyRecord: SurveyRecord = {
+      participantId: input.participantId,
+      helpfulScore: input.helpfulScore as SurveyRecord["helpfulScore"],
+      hintsScore: input.hintsScore as SurveyRecord["hintsScore"],
+      engagementScore: input.engagementScore as SurveyRecord["engagementScore"],
+      reuseScore: input.reuseScore as SurveyRecord["reuseScore"],
+      helpfulComment: input.helpfulComment,
+      confusingComment: input.confusingComment,
+      submittedAt: new Date(),
+    };
+
+    await db.collection<SurveyRecord>("surveys").updateOne(
+      { participantId: input.participantId },
+      { $set: surveyRecord },
+      { upsert: true },
+    );
+  }
 
   await logStudyEvent(
     {
@@ -233,6 +243,7 @@ export async function submitSurvey(rawInput: unknown, userAgent: string | null) 
         hintsScore: input.hintsScore,
         engagementScore: input.engagementScore,
         reuseScore: input.reuseScore,
+        skipped: !hasSurveyContent,
       },
     },
     userAgent,

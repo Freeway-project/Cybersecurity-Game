@@ -339,13 +339,6 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
       return;
     }
 
-    const missingScore = surveyItems.some((item) => !surveyForm[item.id]);
-
-    if (missingScore) {
-      setFeedback("Please rate each survey item before finishing.");
-      return;
-    }
-
     setSubmitting(true);
     setFeedback(null);
 
@@ -358,10 +351,10 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
         body: JSON.stringify({
           participantId,
           sessionId,
-          helpfulScore: surveyForm.helpfulScore,
-          hintsScore: surveyForm.hintsScore,
-          engagementScore: surveyForm.engagementScore,
-          reuseScore: surveyForm.reuseScore,
+          helpfulScore: surveyForm.helpfulScore ?? undefined,
+          hintsScore: surveyForm.hintsScore ?? undefined,
+          engagementScore: surveyForm.engagementScore ?? undefined,
+          reuseScore: surveyForm.reuseScore ?? undefined,
           helpfulComment: surveyForm.helpfulComment || undefined,
           confusingComment: surveyForm.confusingComment || undefined,
         }),
@@ -550,14 +543,19 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
                   key={item.id}
                   className="rounded-[24px] border border-[var(--border)] bg-[var(--card)]/70 p-5"
                 >
-                  <p className="text-sm font-semibold text-[var(--ink)]">
+                  <p className="text-base font-semibold text-[var(--ink)]">
                     {index + 1}. {item.prompt}
                   </p>
                   <div className="mt-4 space-y-2">
                     {item.options.map((option) => (
                       <label
                         key={option.value}
-                        className="flex cursor-pointer items-start gap-3 rounded-2xl bg-[var(--card-strong)] px-4 py-3 text-sm text-[var(--ink)] transition hover:bg-[var(--card-soft)]"
+                        className={[
+                          "flex cursor-pointer items-start gap-3 rounded-2xl border px-4 py-3 text-base transition",
+                          answers[item.id] === option.value
+                            ? "border-[var(--accent-strong)] bg-[var(--accent)]/18 text-white shadow-[0_0_0_1px_rgba(78,155,255,0.2)]"
+                            : "border-[var(--border)] bg-[var(--card-strong)] text-[#f3f7ff] hover:bg-[var(--card-soft)]",
+                        ].join(" ")}
                       >
                         <input
                           type="radio"
@@ -575,7 +573,11 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
                           }}
                           className="mt-1"
                         />
-                        <span>{option.label}</span>
+                        <span
+                          className={answers[item.id] === option.value ? "font-medium text-white" : "font-medium text-[#f3f7ff]"}
+                        >
+                          {option.label}
+                        </span>
                       </label>
                     ))}
                   </div>
@@ -614,8 +616,11 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
                 Perception survey
               </p>
               <h2 className="mt-3 text-2xl font-semibold text-[var(--ink)]">
-                Rate the usefulness and clarity of the pilot
+                Optional survey before you finish
               </h2>
+              <p className="mt-2 text-base leading-7 text-[var(--ink-muted)]">
+                You can rate any items you want, leave comments, or skip the survey and finish the session.
+              </p>
             </div>
             <div className="space-y-4">
               {surveyItems.map((item) => (
@@ -623,15 +628,29 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
                   key={item.id}
                   className="rounded-[24px] border border-[var(--border)] bg-[var(--card)]/70 p-5"
                 >
-                  <p className="text-sm font-semibold text-[var(--ink)]">{item.label}</p>
+                  <p className="text-base font-semibold text-[var(--ink)]">{item.label}</p>
                   <div className="mt-4 grid gap-2 sm:grid-cols-5">
                     {(Object.keys(likertLabels) as unknown as LikertScore[]).map((value) => (
                       <label
                         key={value}
-                        className="flex cursor-pointer flex-col rounded-2xl bg-[var(--card-strong)] px-4 py-3 text-center text-xs text-[var(--ink-muted)] transition hover:bg-[var(--card-soft)]"
+                        className={[
+                          "flex cursor-pointer flex-col rounded-2xl border px-4 py-3 text-center text-sm transition",
+                          surveyForm[item.id] === value
+                            ? "border-[var(--accent-strong)] bg-[var(--accent)]/18 text-sky-50 shadow-[0_0_0_1px_rgba(78,155,255,0.2)]"
+                            : "border-[var(--border)] bg-[var(--card-strong)] text-[#dbe7f8] hover:bg-[var(--card-soft)]",
+                        ].join(" ")}
                       >
-                        <span className="text-base font-semibold text-[var(--ink)]">{value}</span>
-                        <span className="mt-1">{likertLabels[value]}</span>
+                        <span
+                          className={[
+                            "text-base font-semibold",
+                            surveyForm[item.id] === value ? "text-white" : "text-[var(--ink)]",
+                          ].join(" ")}
+                        >
+                          {value}
+                        </span>
+                        <span className={surveyForm[item.id] === value ? "mt-1 font-medium text-sky-50" : "mt-1 font-medium text-[#dbe7f8]"}>
+                          {likertLabels[value]}
+                        </span>
                         <input
                           type="radio"
                           name={item.id}
@@ -681,7 +700,7 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
             </div>
             <div className="flex justify-end">
               <Button type="submit" disabled={submitting}>
-                {submitting ? "Finishing..." : "Submit survey and finish"}
+                {submitting ? "Finishing..." : "Finish session"}
               </Button>
             </div>
           </form>
@@ -709,6 +728,7 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
       eyebrow="Research Pilot"
       title={studyCopy.title}
       description={studyCopy.subtitle}
+      compact={currentStep === "game-placeholder"}
     >
       <div className="space-y-4">
         {feedback ? (

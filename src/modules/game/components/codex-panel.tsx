@@ -24,19 +24,19 @@ export function CodexPanel({
   return (
     <aside className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="font-mono text-xs uppercase tracking-[0.3em] text-[var(--accent-strong)]">
+        <p className="font-mono text-sm font-semibold uppercase tracking-[0.3em] text-[var(--accent-strong)]">
           Codex
         </p>
         <button
           type="button"
           onClick={onToggle}
-          className="rounded-full border border-[var(--border-strong)] bg-[var(--card-strong)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--ink)] transition hover:bg-[var(--card-soft)]"
+          className="rounded-full border border-[var(--border-strong)] bg-[var(--card-strong)] px-4 py-2 text-sm font-semibold uppercase tracking-[0.18em] text-[var(--ink)] transition hover:bg-[var(--card-soft)]"
         >
           {isOpen ? "Hide" : "Open"}
         </button>
       </div>
       {isOpen ? (
-        <div className="space-y-4 rounded-[28px] border border-[var(--border)] bg-[var(--card)]/92 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur">
+        <div className="space-y-4 rounded-[28px] border border-[var(--border)] bg-[var(--card)]/92 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur lg:p-6">
           <div className="space-y-2">
             {Object.values(codexEntries).map((entry) => {
               const unlocked = unlockedEntries.includes(entry.id);
@@ -48,7 +48,7 @@ export function CodexPanel({
                   disabled={!unlocked}
                   onClick={() => onSelectEntry(entry.id)}
                   className={[
-                    "w-full rounded-2xl px-4 py-3 text-left text-sm transition",
+                    "w-full rounded-2xl px-4 py-3 text-left text-base font-medium transition",
                     unlocked
                       ? activeEntryId === entry.id
                         ? "bg-[var(--accent-strong)] text-white"
@@ -62,29 +62,29 @@ export function CodexPanel({
             })}
           </div>
           <div className="rounded-[22px] border border-[var(--border)] bg-[var(--card-soft)] p-4">
-            <h3 className="text-lg font-semibold text-[var(--ink)]">{activeEntry.title}</h3>
+            <h3 className="text-xl font-semibold text-[var(--ink)]">{activeEntry.title}</h3>
             {activeEntryUnlocked ? (
               <>
-                <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
+                <p className="mt-2 text-base leading-7 text-[var(--ink)]">
                   {activeEntry.summary}
                 </p>
-                <ul className="mt-4 space-y-2 text-sm leading-6 text-[var(--ink-muted)]">
+                <ul className="mt-4 space-y-2 text-base leading-7 text-[var(--ink)]">
                   {activeEntry.bullets.map((bullet) => (
-                    <li key={bullet} className="rounded-2xl bg-[var(--card-strong)] px-3 py-2">
+                    <li key={bullet} className="rounded-2xl bg-[var(--card-strong)] px-3 py-2 font-medium">
                       {bullet}
                     </li>
                   ))}
                 </ul>
               </>
             ) : (
-              <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
+              <p className="mt-2 text-base leading-7 text-[var(--ink)]">
                 Clear the matching level to unlock this concept summary.
               </p>
             )}
           </div>
         </div>
       ) : (
-        <div className="rounded-[24px] border border-[var(--border)] bg-[var(--card-soft)] p-4 text-sm text-[var(--ink-muted)]">
+        <div className="rounded-[24px] border border-[var(--border)] bg-[var(--card-soft)] p-4 text-base font-medium leading-7 text-[var(--ink)]">
           {unlockedEntries.length}/3 entries unlocked. Open the Codex to review the concepts you have earned.
         </div>
       )}

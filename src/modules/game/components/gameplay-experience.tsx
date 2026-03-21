@@ -26,6 +26,11 @@ interface GameplayExperienceProps {
   sessionId: string;
 }
 
+interface ToastState {
+  message: string;
+  tone: "info" | "error";
+}
+
 const taskIds: Record<LevelId, string> = {
   "caesar-cipher": "shift-control",
   "xor-stream": "signal-repair",
@@ -83,6 +88,7 @@ export function GameplayExperience({
   const [activeCodexEntry, setActiveCodexEntry] =
     useState<CodexEntryId>("caesar-cipher");
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [toast, setToast] = useState<ToastState | null>(null);
   const [blockFeedback, setBlockFeedback] = useState<string[]>([]);
   const [readyForPosttest, setReadyForPosttest] = useState(false);
   const levelStartTimesRef = useRef<Record<LevelId, number>>({
@@ -92,6 +98,7 @@ export function GameplayExperience({
   });
   const lastInteractionRef = useRef(0);
   const startedLevelsRef = useRef<Set<LevelId>>(new Set());
+  const xorStepTwoRef = useRef<HTMLDivElement | null>(null);
 
   const currentLevel = gameplayLevels[currentLevelIndex];
   const currentLevelId = currentLevel.id;
@@ -152,6 +159,31 @@ export function GameplayExperience({
     return () => window.clearInterval(intervalId);
   }, [completedByLevel, currentLevelId]);
 
+  useEffect(() => {
+    if (!xorRuleSolved || currentLevelId !== "xor-stream") {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      xorStepTwoRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  }, [currentLevelId, xorRuleSolved]);
+
+  useEffect(() => {
+    if (!toast) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setToast(null);
+    }, 2600);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [toast]);
+
   function markInteraction() {
     lastInteractionRef.current = currentTimestamp();
   }
@@ -175,6 +207,10 @@ export function GameplayExperience({
               ? Math.max(previous[levelId], 1)
               : previous[levelId],
     }));
+  }
+
+  function showToast(message: string, tone: ToastState["tone"] = "error") {
+    setToast({ message, tone });
   }
 
   function getNextAttempt(levelId: LevelId) {
@@ -300,6 +336,7 @@ export function GameplayExperience({
 
     setCurrentLevelIndex((previous) => previous + 1);
     setStatusMessage(null);
+    setToast(null);
     setBlockFeedback([]);
   }
 
@@ -366,6 +403,7 @@ export function GameplayExperience({
 
     if (!isCorrect) {
       setStatusMessage("The preview is still off. Adjust the shift and try again.");
+      showToast("Wrong shift. Move the slider until the message becomes readable.");
       handleFailedAttempt("caesar-cipher", attemptNo, "wrong-shift");
       return;
     }
@@ -389,6 +427,7 @@ export function GameplayExperience({
     if (xorRuleSelection.some((value) => value === "")) {
       logAttempt("xor-stream", attemptNo, "rule-incomplete");
       setStatusMessage("Finish each XOR output before checking the rule.");
+      showToast("Finish every output bit before checking Step 1.");
       handleFailedAttempt("xor-stream", attemptNo, "rule-incomplete");
       return;
     }
@@ -398,6 +437,7 @@ export function GameplayExperience({
 
     if (!isCorrect) {
       setStatusMessage("Close. Same bits give 0, and different bits give 1.");
+      showToast("Not quite. Same bits give 0 and different bits give 1.");
       handleFailedAttempt("xor-stream", attemptNo, "rule-wrong");
       return;
     }
@@ -407,7 +447,9 @@ export function GameplayExperience({
       stage: "rule-board",
       outputs: xorRuleAnswer,
     });
-    setStatusMessage("Correct. XOR marks difference. Now use the same rule to recover the briefing.");
+    setStatusMessage(
+      "Step 1 complete. Scroll down to Step 2 and recover the briefing by choosing the output bits.",
+    );
   }
 
   function submitXorRecovery() {
@@ -417,6 +459,7 @@ export function GameplayExperience({
     if (xorRecoverySelection.some((value) => value === "")) {
       logAttempt("xor-stream", attemptNo, "recovery-incomplete");
       setStatusMessage("Choose every output bit before recovering the signal.");
+      showToast("Choose every output bit before recovering the signal.");
       handleFailedAttempt("xor-stream", attemptNo, "recovery-incomplete");
       return;
     }
@@ -430,6 +473,7 @@ export function GameplayExperience({
 
     if (!isCorrect) {
       setStatusMessage("The signal is still scrambled. Work across the columns one bit at a time.");
+      showToast("Wrong recovery. Compare each pair of bits one column at a time.");
       handleFailedAttempt("xor-stream", attemptNo, "recovery-wrong");
       return;
     }
@@ -453,6 +497,7 @@ export function GameplayExperience({
     if (!evaluation.correct) {
       setBlockFeedback(evaluation.feedback);
       setStatusMessage("The setup is still off. Use the feedback to keep the key separate from the IV.");
+      showToast("Wrong order. The key is the secret and the IV is only the starter value.");
       handleFailedAttempt("block-cipher", attemptNo, "wrong-sequence");
       return;
     }
@@ -470,13 +515,13 @@ export function GameplayExperience({
           <p className="font-mono text-xs uppercase tracking-[0.28em] text-[var(--accent-strong)]">
             Intercepted text
           </p>
-          <p className="mt-3 break-words font-mono text-xl tracking-[0.2em] text-[var(--ink)]">
+          <p className="mt-3 break-words font-mono text-2xl tracking-[0.2em] text-[var(--ink)] sm:text-[1.75rem]">
             {caesarLevel.ciphertext}
           </p>
         </div>
         <div className="rounded-[24px] border border-[var(--border)] bg-[var(--card-strong)] p-5">
           <label className="block">
-            <span className="text-sm font-semibold text-[var(--ink)]">Choose the shift</span>
+            <span className="text-base font-semibold text-[var(--ink)]">Choose the shift</span>
             <input
               type="range"
               min={0}
@@ -510,9 +555,9 @@ export function GameplayExperience({
             <p className="text-xs uppercase tracking-[0.25em] text-[var(--ink-muted)]">
               Live plaintext preview
             </p>
-            <p className="mt-2 break-words font-mono text-lg text-[var(--ink)]">
-              {caesarPreview}
-            </p>
+              <p className="mt-2 break-words font-mono text-xl text-[var(--ink)] sm:text-2xl">
+                {caesarPreview}
+              </p>
           </div>
         </div>
         <div className="flex justify-end">
@@ -529,10 +574,10 @@ export function GameplayExperience({
           <p className="font-mono text-xs uppercase tracking-[0.28em] text-[var(--accent-strong)]">
             Step 1
           </p>
-          <h3 className="mt-3 text-xl font-semibold text-[var(--ink)]">
+          <h3 className="mt-3 text-2xl font-semibold text-[var(--ink)]">
             Rebuild the XOR rule
           </h3>
-          <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
+          <p className="mt-2 text-base leading-7 text-[var(--ink-muted)]">
             Same bits produce 0. Different bits produce 1. Choose the output for each signal pair.
           </p>
         </div>
@@ -547,13 +592,13 @@ export function GameplayExperience({
                 <p className="text-xs uppercase tracking-[0.25em] text-[var(--ink-muted)]">
                   Signal A
                 </p>
-                <p className="mt-2 font-mono text-xl text-[var(--ink)]">{pair.left}</p>
+                <p className="mt-2 font-mono text-2xl text-[var(--ink)]">{pair.left}</p>
               </div>
               <div>
                 <p className="text-xs uppercase tracking-[0.25em] text-[var(--ink-muted)]">
                   Key signal
                 </p>
-                <p className="mt-2 font-mono text-xl text-[var(--ink)]">{pair.right}</p>
+                <p className="mt-2 font-mono text-2xl text-[var(--ink)]">{pair.right}</p>
               </div>
               <div className="hidden items-center justify-center text-sm font-semibold text-[var(--ink-muted)] md:flex">
                 XOR
@@ -568,7 +613,7 @@ export function GameplayExperience({
                       key={value}
                       variant={xorRuleSelection[index] === value ? "primary" : "secondary"}
                       onClick={() => chooseBit(index, value, setXorRuleSelection)}
-                      className="min-w-12 px-4 py-2 font-mono text-base"
+                      className="min-w-14 px-5 py-3 font-mono text-lg"
                     >
                       {value}
                     </Button>
@@ -591,15 +636,18 @@ export function GameplayExperience({
         </div>
 
         {xorRuleSolved ? (
-          <div className="space-y-5">
+          <div ref={xorStepTwoRef} className="space-y-5">
+            <div className="rounded-[24px] border border-[var(--accent-strong)]/35 bg-[var(--accent)]/14 px-5 py-4 text-sm text-sky-100">
+              Step 1 is complete. Step 2 is now unlocked below. Use the scrambled signal and key signal to choose the recovered bits.
+            </div>
             <div className="rounded-[24px] border border-[var(--border)] bg-[var(--card)]/75 p-5">
               <p className="font-mono text-xs uppercase tracking-[0.28em] text-[var(--accent-strong)]">
                 Step 2
               </p>
-              <h3 className="mt-3 text-xl font-semibold text-[var(--ink)]">
+              <h3 className="mt-3 text-2xl font-semibold text-[var(--ink)]">
                 Recover the briefing
               </h3>
-              <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
+              <p className="mt-2 text-base leading-7 text-[var(--ink-muted)]">
                 Apply the same XOR rule to every column. Use the scrambled signal and the key signal to restore the original bits.
               </p>
             </div>
@@ -609,7 +657,7 @@ export function GameplayExperience({
                 <p className="text-xs uppercase tracking-[0.25em] text-[var(--ink-muted)]">
                   Scrambled signal
                 </p>
-                <p className="mt-3 font-mono text-2xl tracking-[0.35em] text-[var(--ink)]">
+                <p className="mt-3 font-mono text-[1.8rem] tracking-[0.35em] text-[var(--ink)]">
                   {xorLevel.recoveryCipherBits}
                 </p>
               </div>
@@ -617,14 +665,14 @@ export function GameplayExperience({
                 <p className="text-xs uppercase tracking-[0.25em] text-[var(--ink-muted)]">
                   Key signal
                 </p>
-                <p className="mt-3 font-mono text-2xl tracking-[0.35em] text-[var(--ink)]">
+                <p className="mt-3 font-mono text-[1.8rem] tracking-[0.35em] text-[var(--ink)]">
                   {xorLevel.recoveryKeyBits}
                 </p>
               </div>
             </div>
 
             <div className="rounded-[24px] border border-[var(--border)] bg-[var(--card-strong)] p-5">
-              <p className="text-sm font-semibold text-[var(--ink)]">
+              <p className="text-base font-semibold text-[var(--ink)]">
                 Choose the recovered output bits
               </p>
               <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -636,7 +684,7 @@ export function GameplayExperience({
                     <p className="text-xs uppercase tracking-[0.25em] text-[var(--ink-muted)]">
                       Column {index + 1}
                     </p>
-                    <p className="mt-2 font-mono text-lg text-[var(--ink)]">
+                    <p className="mt-2 font-mono text-xl text-[var(--ink)]">
                       {cipherBit} XOR {xorLevel.recoveryKeyBits[index]}
                     </p>
                     <div className="mt-3 flex gap-2">
@@ -647,7 +695,7 @@ export function GameplayExperience({
                             xorRecoverySelection[index] === value ? "primary" : "secondary"
                           }
                           onClick={() => chooseBit(index, value, setXorRecoverySelection)}
-                          className="min-w-12 px-4 py-2 font-mono text-base"
+                          className="min-w-14 px-5 py-3 font-mono text-lg"
                         >
                           {value}
                         </Button>
@@ -687,7 +735,7 @@ export function GameplayExperience({
               key={choice.id}
               className="rounded-2xl border border-[var(--border)] bg-[var(--card)]/75 p-4"
             >
-              <p className="text-sm font-semibold text-[var(--ink)]">{choice.label}</p>
+              <p className="text-base font-semibold text-[var(--ink)]">{choice.label}</p>
               <p className="mt-2 text-xs leading-5 text-[var(--ink-muted)]">
                 {choice.helper}
               </p>
@@ -700,7 +748,7 @@ export function GameplayExperience({
               key={slotLabel}
               className="block rounded-[24px] border border-[var(--border)] bg-[var(--card-strong)] p-5"
             >
-              <span className="text-sm font-semibold text-[var(--ink)]">{slotLabel}</span>
+              <span className="text-base font-semibold text-[var(--ink)]">{slotLabel}</span>
               <select
                 value={blockSelection[index]}
                 onChange={(event) => {
@@ -745,18 +793,32 @@ export function GameplayExperience({
   const revealedHints = currentLevel.hints.slice(0, revealedHintCount);
 
   return (
-    <div className="mx-auto grid w-full max-w-5xl gap-4 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
-      <Card className="p-5 sm:p-7">
-        <div className="space-y-6">
+    <div className="mx-auto grid w-full max-w-[92rem] gap-4 lg:max-h-[calc(100vh-10.5rem)] lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start">
+      {toast ? (
+        <div className="pointer-events-none fixed right-4 top-4 z-50 w-[min(26rem,calc(100vw-2rem))]">
+          <div
+            className={[
+              "rounded-2xl border px-4 py-3 text-sm shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur",
+              toast.tone === "error"
+                ? "border-amber-500/35 bg-amber-500/16 text-amber-50"
+                : "border-sky-500/35 bg-sky-500/16 text-sky-50",
+            ].join(" ")}
+          >
+            {toast.message}
+          </div>
+        </div>
+      ) : null}
+      <Card className="p-5 sm:p-6 lg:h-[calc(100vh-10.5rem)] lg:min-h-0">
+        <div className="space-y-5 lg:flex lg:h-full lg:flex-col lg:space-y-4">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-3">
               <p className="font-mono text-xs uppercase tracking-[0.3em] text-[var(--accent-strong)]">
                 Mission
               </p>
-              <h2 className="text-2xl font-semibold text-[var(--ink)]">
+              <h2 className="text-2xl font-semibold text-[var(--ink)] sm:text-[1.9rem]">
                 {currentLevel.title}
               </h2>
-              <p className="max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
+              <p className="max-w-2xl text-base leading-7 text-[var(--ink-muted)]">
                 {currentLevel.mission}
               </p>
             </div>
@@ -780,11 +842,13 @@ export function GameplayExperience({
             </div>
           ) : null}
 
-          {currentLevelId === "caesar-cipher"
-            ? renderCaesarLevel()
-            : currentLevelId === "xor-stream"
-              ? renderXorLevel()
-              : renderBlockCipherLevel()}
+          <div className="lg:min-h-0 lg:flex-1 lg:overflow-auto lg:pr-1">
+            {currentLevelId === "caesar-cipher"
+              ? renderCaesarLevel()
+              : currentLevelId === "xor-stream"
+                ? renderXorLevel()
+                : renderBlockCipherLevel()}
+          </div>
 
           {completedByLevel[currentLevelId] ? (
             <div className="flex justify-end">
@@ -800,14 +864,14 @@ export function GameplayExperience({
         </div>
       </Card>
 
-      <div className="space-y-4 lg:sticky lg:top-4">
-        <Card className="p-5">
+      <div className="space-y-4 lg:h-[calc(100vh-10.5rem)] lg:overflow-auto lg:pr-1">
+        <Card className="p-5 lg:p-6">
           <div className="space-y-4">
             <div className="space-y-1">
-              <p className="font-mono text-xs uppercase tracking-[0.28em] text-[var(--accent-strong)]">
+              <p className="font-mono text-sm font-semibold uppercase tracking-[0.28em] text-[var(--accent-strong)]">
                 Hints
               </p>
-              <p className="text-sm text-[var(--ink-muted)]">
+              <p className="text-base font-medium leading-7 text-[var(--ink)]">
                 Unlock after repeated failed attempts or 30 seconds of inactivity.
               </p>
             </div>
@@ -828,15 +892,15 @@ export function GameplayExperience({
                 {revealedHints.map((hint, index) => (
                   <div
                     key={hint}
-                    className="rounded-2xl border border-[var(--border)] bg-[var(--card-strong)] px-4 py-3 text-sm text-[var(--ink-muted)]"
+                    className="rounded-2xl border border-[var(--border)] bg-[var(--card-strong)] px-4 py-3 text-base font-medium leading-7 text-[var(--ink)]"
                   >
-                    <span className="font-semibold text-[var(--ink)]">Hint {index + 1}.</span>{" "}
+                    <span className="font-bold text-[var(--accent-strong)]">Hint {index + 1}.</span>{" "}
                     {hint}
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="rounded-2xl border border-dashed border-[var(--border-strong)] bg-[var(--card-soft)] px-4 py-3 text-sm text-[var(--ink-muted)]">
+              <div className="rounded-2xl border border-dashed border-[var(--border-strong)] bg-[var(--card-soft)] px-4 py-3 text-base font-medium leading-7 text-[var(--ink)]">
                 Keep testing the puzzle to unlock help.
               </div>
             )}
