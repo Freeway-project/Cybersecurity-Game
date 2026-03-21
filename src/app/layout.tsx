@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+
+import { VercelAnalytics } from "@/components/analytics/vercel-analytics";
+
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -14,7 +17,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full">
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">
+        {children}
+        <VercelAnalytics />
+      </body>
     </html>
   );
 }
