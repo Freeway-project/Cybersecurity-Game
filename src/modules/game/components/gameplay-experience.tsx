@@ -71,7 +71,9 @@ export function GameplayExperience({
   const [xorRecoverySelection, setXorRecoverySelection] = useState(
     buildBitSelectionState(xorLevel.recoveryCipherBits.length),
   );
-  const [blockSelection, setBlockSelection] = useState<string[]>(["", "", "", ""]);
+  const [blockSelection, setBlockSelection] = useState<string[]>(
+    buildBitSelectionState(blockCipherLevel.slotLabels.length),
+  );
   const [attemptsByLevel, setAttemptsByLevel] = useState(buildLevelCounterState(0));
   const [unlockedHintsByLevel, setUnlockedHintsByLevel] = useState(buildLevelCounterState(0));
   const [revealedHintsByLevel, setRevealedHintsByLevel] = useState(buildLevelCounterState(0));
@@ -450,7 +452,7 @@ export function GameplayExperience({
 
     if (!evaluation.correct) {
       setBlockFeedback(evaluation.feedback);
-      setStatusMessage("The sequence is still off. Use the feedback to separate the IV step from the key step.");
+      setStatusMessage("The setup is still off. Use the feedback to keep the key separate from the IV.");
       handleFailedAttempt("block-cipher", attemptNo, "wrong-sequence");
       return;
     }
@@ -458,7 +460,7 @@ export function GameplayExperience({
     setBlockFeedback([]);
     handleSuccessfulAttempt("block-cipher", attemptNo, "correct-sequence");
     unlockCodex("block-cipher");
-    setStatusMessage("Block-cipher level cleared. The final Codex entry is unlocked.");
+    setStatusMessage(blockCipherLevel.successMessage);
   }
 
   function renderCaesarLevel() {

@@ -93,9 +93,15 @@ export function evaluateBlockSequence(selection: string[]) {
       return [];
     }
 
-    if (choiceId === "reuse-iv-as-key") {
+    if (choiceId === "iv" && expectedId === "key") {
       return [
-        `${blockCipherLevel.slotLabels[index]} is incorrect. The IV never becomes the secret key.`,
+        `${blockCipherLevel.slotLabels[index]} is incorrect. The IV is the starting helper value, not the secret key.`,
+      ];
+    }
+
+    if (choiceId === "key" && expectedId === "iv") {
+      return [
+        `${blockCipherLevel.slotLabels[index]} is incorrect. The key is the secret, but the IV is the starting helper value.`,
       ];
     }
 

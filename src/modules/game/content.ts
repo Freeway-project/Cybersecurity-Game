@@ -47,6 +47,7 @@ export interface BlockCipherLevelConfig {
   slotLabels: string[];
   correctSequence: string[];
   choices: BlockChoice[];
+  successMessage: string;
   hints: string[];
 }
 
@@ -102,51 +103,56 @@ export const xorLevel: XorLevelConfig = {
 
 export const blockCipherLevel: BlockCipherLevelConfig = {
   id: "block-cipher",
-  title: "Level 3: Block Cipher Roles",
+  title: "Level 3: Fix the Secure Encryption Setup",
   mission:
-    "Rebuild the block-cipher pipeline. The IV randomizes the block before encryption, while the key is used by the encryption step itself.",
+    "The secure channel failed. Rebuild the encryption flow by placing the cards in the right roles: input, starting helper, secret, encryption step, and output.",
   slotLabels: [
-    "Slot 1: Starting input",
-    "Slot 2: Pre-encryption mixing",
-    "Slot 3: Encryption step",
-    "Slot 4: Output",
+    "Slot 1: Data going in",
+    "Slot 2: Starting helper value",
+    "Slot 3: Secret used by encryption",
+    "Slot 4: Encryption action",
+    "Slot 5: Data coming out",
   ],
   correctSequence: [
-    "plaintext-block",
-    "mix-with-iv",
-    "encrypt-with-key",
-    "ciphertext-block",
+    "plaintext",
+    "iv",
+    "key",
+    "encrypt",
+    "ciphertext",
   ],
   choices: [
     {
-      id: "plaintext-block",
-      label: "Plaintext block",
-      helper: "The original block that enters the pipeline.",
+      id: "plaintext",
+      label: "Plaintext",
+      helper: "The original message chunk before encryption.",
     },
     {
-      id: "mix-with-iv",
-      label: "Combine with IV",
-      helper: "Use the initialization vector to randomize the first block.",
+      id: "iv",
+      label: "IV",
+      helper: "The starting helper value that makes repeated encryption less predictable.",
     },
     {
-      id: "encrypt-with-key",
-      label: "Encrypt with key",
-      helper: "The secret key drives the encryption transformation.",
+      id: "key",
+      label: "Key",
+      helper: "The secret value used by the cipher.",
     },
     {
-      id: "ciphertext-block",
-      label: "Ciphertext block",
-      helper: "The encrypted block that leaves the pipeline.",
+      id: "encrypt",
+      label: "Encrypt",
+      helper: "The action that transforms the input into protected output.",
     },
     {
-      id: "reuse-iv-as-key",
-      label: "Use IV as the key",
-      helper: "Decoy: the IV never replaces the secret key.",
+      id: "ciphertext",
+      label: "Ciphertext",
+      helper: "The scrambled block that comes out of the cipher.",
     },
   ],
+  successMessage:
+    "Flow restored. The channel is secure again, and the final Codex entry is now unlocked.",
   hints: [
-    "Think in stages: the plaintext enters first, the IV influences the block before encryption, and the key is used during encryption.",
-    "Correct order: Plaintext block -> Combine with IV -> Encrypt with key -> Ciphertext block.",
+    "Plaintext goes in first, and ciphertext comes out last.",
+    "The key is the secret. The IV is only the starting helper value.",
+    "One clean order is Plaintext -> IV -> Key -> Encrypt -> Ciphertext.",
   ],
 };
 
@@ -180,11 +186,11 @@ export const codexEntries: Record<CodexEntryId, CodexEntry> = {
   "block-cipher": {
     id: "block-cipher",
     title: "Codex: Block Cipher and IV",
-    summary: "The IV and the key play different roles in a block cipher workflow.",
+    summary: "A block cipher works on chunks of data, and the key and IV do different jobs in the process.",
     bullets: [
-      "The key is the secret value used by the encryption algorithm.",
-      "The IV adds freshness so repeated messages do not begin the same way.",
-      "The IV is not a replacement for the key and does not need to remain secret in the same way.",
+      "A block cipher encrypts fixed-size chunks of data instead of one letter at a time.",
+      "The key is the secret value used for encryption.",
+      "The IV is a starting helper value, not the secret key.",
     ],
   },
 };
