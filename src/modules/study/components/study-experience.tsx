@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { assessmentItems, likertLabels, priorExperienceLabels, studyCopy, surveyItems } from "@/config/study";
+import { getClientEnv } from "@/config/env";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SiteShell } from "@/components/layout/site-shell";
@@ -85,6 +86,8 @@ async function readJson<T>(response: Response): Promise<T> {
 }
 
 export function StudyExperience({ initialToken }: StudyExperienceProps) {
+  const devBypassEnabled =
+    process.env.NODE_ENV !== "production" && getClientEnv().NEXT_PUBLIC_ENABLE_DEV_BYPASS;
   const [tokenState, setTokenState] = useState<TokenResolutionResponse | null>(null);
   const [currentStep, setCurrentStep] = useState<StudyStep>("landing");
   const [consentForm, setConsentForm] = useState<ConsentFormState>(initialConsentForm);
@@ -424,11 +427,13 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
             {tokenState?.error ??
               "This study link could not be verified. Use the invite link exactly as it was sent."}
           </p>
-          <div className="rounded-2xl border border-dashed border-[var(--border-strong)] bg-[var(--card)]/70 p-4 text-sm text-[var(--ink-muted)]">
-            Local development can use the dev bypass when
-            {" "}
-            <code>NEXT_PUBLIC_ENABLE_DEV_BYPASS=true</code>.
-          </div>
+          {devBypassEnabled ? (
+            <div className="rounded-2xl border border-dashed border-[var(--border-strong)] bg-[var(--card)]/70 p-4 text-sm text-[var(--ink-muted)]">
+              Local development can use the dev bypass when
+              {" "}
+              <code>NEXT_PUBLIC_ENABLE_DEV_BYPASS=true</code>.
+            </div>
+          ) : null}
         </Card>
       );
     }

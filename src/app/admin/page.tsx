@@ -27,7 +27,7 @@ export default async function AdminPage() {
     <SiteShell
       eyebrow="Pilot Operations"
       title="Study admin console"
-      description="Invite generation, funnel visibility, and exports for the non-game pilot build."
+      description="Invite generation, funnel visibility, and exports for the deployed pilot build."
     >
       <div className="space-y-6">
         {isAuthenticated ? (

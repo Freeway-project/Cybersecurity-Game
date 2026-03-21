@@ -1,10 +1,10 @@
 # Cybersecurity Game Pilot
 
-A modular Next.js pilot build for a cryptography education study. This phase intentionally implements the study shell before the gameplay module.
+A modular Next.js pilot build for a cryptography education study. The current build includes the full participant flow, three gameplay levels, Mongo-backed logging, and admin export tools.
 
 ## Current Scope
 
-- quick participant entry and dev bypass
+- token-gated participant entry
 - consent and session creation
 - 3-item pre-test
 - 3 gameplay levels
@@ -30,6 +30,8 @@ Copy `.env.example` to `.env.local` and set:
 - `ADMIN_SECRET`
 - `APP_BASE_URL`
 - `NEXT_PUBLIC_ENABLE_DEV_BYPASS`
+
+For deployment, keep `NEXT_PUBLIC_ENABLE_DEV_BYPASS=false`.
 
 ## Docker MongoDB
 
@@ -72,12 +74,35 @@ Participant flow starts at `http://localhost:3000/start`.
 
 Admin flow starts at `http://localhost:3000/admin`.
 
+For local testing without invite emails, you can set `NEXT_PUBLIC_ENABLE_DEV_BYPASS=true` in `.env.local`.
+
+## Vercel Deployment
+
+Set these environment variables in Vercel:
+
+- `MONGODB_URI`
+- `MONGODB_DB_NAME`
+- `ADMIN_SECRET`
+- `APP_BASE_URL`
+- `NEXT_PUBLIC_ENABLE_DEV_BYPASS=false`
+
+Recommended values:
+
+- `APP_BASE_URL=https://your-deployment-domain`
+- `NEXT_PUBLIC_ENABLE_DEV_BYPASS=false`
+
+Notes:
+
+- Do not use the local Docker MongoDB URI in Vercel unless the database is actually reachable from Vercel.
+- For production, use a hosted MongoDB instance such as MongoDB Atlas.
+- `ADMIN_SECRET` should be a strong random secret and should not match your local value.
+
 ## Study Flow
 
 1. Resolve invite token from `/start?token=...`
 2. Collect consent and participant profile fields
 3. Run the 3-item pre-test
-4. Hold a reserved slot for the future gameplay module
+4. Run the 3 gameplay levels
 5. Run the 3-item post-test
 6. Collect the short survey
 7. Mark the session complete and expose data through admin export
@@ -88,7 +113,7 @@ Admin flow starts at `http://localhost:3000/admin`.
 - `src/modules/study` study flow state and persistence
 - `src/modules/instrumentation` event logging and indexes
 - `src/modules/admin` admin auth, summary counts, exports
-- `src/modules/game` gameplay stub for the later level work
+- `src/modules/game` Caesar, XOR, and block-cipher gameplay
 - `src/lib` Mongo and utility helpers
 - `src/config` study content and runtime config
 - `src/types` shared contracts

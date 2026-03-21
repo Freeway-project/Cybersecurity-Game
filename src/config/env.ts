@@ -11,7 +11,7 @@ const serverEnvSchema = z.object({
 const clientEnvSchema = z.object({
   NEXT_PUBLIC_ENABLE_DEV_BYPASS: z
     .enum(["true", "false"])
-    .default("true")
+    .default("false")
     .transform((value) => value === "true"),
 });
 
@@ -22,7 +22,7 @@ export function getServerEnv() {
 export function getClientEnv() {
   return clientEnvSchema.parse({
     NEXT_PUBLIC_ENABLE_DEV_BYPASS:
-      process.env.NEXT_PUBLIC_ENABLE_DEV_BYPASS ?? "true",
+      process.env.NEXT_PUBLIC_ENABLE_DEV_BYPASS ?? "false",
   });
 }
 
