@@ -30,10 +30,40 @@ Copy `.env.example` to `.env.local` and set:
 - `APP_BASE_URL`
 - `NEXT_PUBLIC_ENABLE_DEV_BYPASS`
 
+## Docker MongoDB
+
+This repo includes a local MongoDB service in [`compose.yaml`](/Users/harshsaw/Cybersecurity/compose.yaml).
+
+Start the database:
+
+```bash
+npm run db:up
+```
+
+Check status:
+
+```bash
+npm run db:status
+```
+
+Stop the database:
+
+```bash
+npm run db:down
+```
+
+The default connection string already matches the Docker service:
+
+```bash
+MONGODB_URI=mongodb://127.0.0.1:27017
+MONGODB_DB_NAME=cybersecurity_game
+```
+
 ## Local Run
 
 ```bash
 npm install
+npm run db:up
 npm run dev
 ```
 
