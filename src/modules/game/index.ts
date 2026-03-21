@@ -1,5 +1,2 @@
-export const gameplayModuleStatus = {
-  status: "deferred",
-  message:
-    "Gameplay levels, hints, and Codex unlocks will be implemented after the study shell and admin pipeline are reviewed.",
-};
+export { GameplayExperience } from "@/modules/game/components/gameplay-experience";
+export { codexEntries, gameplayLevels, levelOrder } from "@/modules/game/content";

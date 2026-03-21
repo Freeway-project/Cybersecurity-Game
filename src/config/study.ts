@@ -37,18 +37,16 @@ export const studyCopy = {
   sessionOutline: [
     "Consent and setup",
     "Three-question pre-test",
-    "Reserved gameplay module slot",
+    "Three cryptography micro-levels",
     "Three-question post-test",
     "Short perception survey",
   ],
-  placeholderMessage:
-    "This slot is reserved for the three cryptography micro-levels. The study shell, logging, and assessment pipeline are ready for game integration.",
 };
 
 export const studyStepLabels: Record<Exclude<StudyStep, "landing" | "complete">, string> = {
   consent: "Consent",
   pretest: "Pre-test",
-  "game-placeholder": "Gameplay Slot",
+  "game-placeholder": "Gameplay",
   posttest: "Post-test",
   survey: "Survey",
 };
