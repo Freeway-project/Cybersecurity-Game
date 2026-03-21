@@ -576,7 +576,7 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
                               [item.id]: event.target.value,
                             }));
                           }}
-                          className="mt-1"
+                          className="sr-only"
                         />
                         <span
                           className={answers[item.id] === option.value ? "font-medium text-white" : "font-medium text-[#f3f7ff]"}

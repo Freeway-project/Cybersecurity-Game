@@ -99,7 +99,7 @@ export function AdminConsole({
               <textarea
                 value={emails}
                 onChange={(event) => setEmails(event.target.value)}
-                className="min-h-52 w-full rounded-3xl border border-[var(--border-strong)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent-strong)]"
+                className="min-h-52 w-full rounded-3xl border border-[var(--border-strong)] bg-[var(--card-strong)] px-4 py-3 text-[var(--ink)] outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[var(--accent-strong)]"
                 placeholder={"student1@example.edu\nstudent2@example.edu"}
               />
             </label>
@@ -109,7 +109,7 @@ export function AdminConsole({
                 <input
                   value={cohort}
                   onChange={(event) => setCohort(event.target.value)}
-                  className="w-full rounded-2xl border border-[var(--border-strong)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent-strong)]"
+                  className="w-full rounded-2xl border border-[var(--border-strong)] bg-[var(--card-strong)] px-4 py-3 text-[var(--ink)] outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[var(--accent-strong)]"
                   placeholder="Optional course or cohort"
                 />
               </label>
@@ -118,7 +118,7 @@ export function AdminConsole({
                 <input
                   value={yearLevel}
                   onChange={(event) => setYearLevel(event.target.value)}
-                  className="w-full rounded-2xl border border-[var(--border-strong)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent-strong)]"
+                  className="w-full rounded-2xl border border-[var(--border-strong)] bg-[var(--card-strong)] px-4 py-3 text-[var(--ink)] outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[var(--accent-strong)]"
                   placeholder="Optional year level"
                 />
               </label>
@@ -148,13 +148,13 @@ export function AdminConsole({
           <div className="space-y-3">
             <a
               href={analysisExportHref}
-              className="block rounded-2xl border border-[var(--border-strong)] bg-white px-4 py-3 text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--card)]"
+              className="block rounded-2xl border border-[var(--border-strong)] bg-[var(--card-strong)] px-4 py-3 text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--card-soft)]"
             >
               Download analysis CSV
             </a>
             <a
               href={rawExportHref}
-              className="block rounded-2xl border border-[var(--border-strong)] bg-white px-4 py-3 text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--card)]"
+              className="block rounded-2xl border border-[var(--border-strong)] bg-[var(--card-strong)] px-4 py-3 text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--card-soft)]"
             >
               Download raw JSON export
             </a>

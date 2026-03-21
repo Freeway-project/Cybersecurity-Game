@@ -61,7 +61,7 @@ export function AdminLoginForm() {
               type="password"
               value={secret}
               onChange={(event) => setSecret(event.target.value)}
-              className="w-full rounded-2xl border border-[var(--border-strong)] bg-white px-4 py-3 outline-none ring-0 transition focus:border-[var(--accent-strong)]"
+              className="w-full rounded-2xl border border-[var(--border-strong)] bg-[var(--card-strong)] px-4 py-3 text-[var(--ink)] outline-none ring-0 transition placeholder:text-[var(--ink-muted)] focus:border-[var(--accent-strong)]"
               placeholder="Enter ADMIN_SECRET"
             />
           </label>
