@@ -6,8 +6,6 @@ import { ensureStudyIndexes, markInviteClicked } from "@/modules/instrumentation
 import type { InviteRecord, SessionRecord, TokenResolutionResponse } from "@/types/study";
 
 export async function resolveToken(token: string | null | undefined): Promise<TokenResolutionResponse> {
-  await ensureStudyIndexes();
-
   if (!token) {
     if (isDevBypassEnabled()) {
       return {
@@ -25,6 +23,8 @@ export async function resolveToken(token: string | null | undefined): Promise<To
       error: "A valid invite token is required.",
     };
   }
+
+  await ensureStudyIndexes();
 
   const db = await getMongoDb();
   const invite = await db.collection<InviteRecord>("invites").findOne({ inviteToken: token });
