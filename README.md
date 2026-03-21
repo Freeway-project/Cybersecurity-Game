@@ -4,12 +4,12 @@ A modular Next.js pilot build for a cryptography education study. This phase int
 
 ## Current Scope
 
-- invite token resolution and dev bypass
+- quick participant entry and dev bypass
 - consent and session creation
 - 3-item pre-test
-- reserved gameplay placeholder step
+- 3 gameplay levels
 - 3-item post-test
-- perception survey
+- optional perception survey
 - Mongo-backed event and session storage
 - admin invite generation and raw or analysis exports
 
@@ -19,6 +19,7 @@ A modular Next.js pilot build for a cryptography education study. This phase int
 - TypeScript
 - Tailwind CSS
 - MongoDB
+- Vercel Analytics
 
 ## Environment
 
@@ -95,4 +96,4 @@ Admin flow starts at `http://localhost:3000/admin`.
 ## Notes
 
 - Invite email records remain separate from participant gameplay data.
-- The gameplay levels, hints, and Codex are deliberately deferred until the study infrastructure is reviewed.
+- Vercel Analytics is enabled at the app root, and the `token` query parameter is removed before page-view URLs are sent.
