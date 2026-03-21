@@ -474,7 +474,7 @@ export function GameplayExperience({
             {caesarLevel.ciphertext}
           </p>
         </div>
-        <div className="rounded-[24px] border border-[var(--border)] bg-white/90 p-5">
+        <div className="rounded-[24px] border border-[var(--border)] bg-[var(--card-strong)] p-5">
           <label className="block">
             <span className="text-sm font-semibold text-[var(--ink)]">Choose the shift</span>
             <input
@@ -506,7 +506,7 @@ export function GameplayExperience({
             <span className="text-sm text-[var(--ink-muted)]">Current shift</span>
             <span className="font-mono text-lg text-[var(--ink)]">{caesarShift}</span>
           </div>
-          <div className="mt-4 rounded-2xl border border-[var(--border)] bg-white px-4 py-4">
+          <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[var(--card-soft)] px-4 py-4">
             <p className="text-xs uppercase tracking-[0.25em] text-[var(--ink-muted)]">
               Live plaintext preview
             </p>
@@ -537,7 +537,7 @@ export function GameplayExperience({
           </p>
         </div>
 
-        <div className="space-y-3 rounded-[24px] border border-[var(--border)] bg-white/90 p-5">
+        <div className="space-y-3 rounded-[24px] border border-[var(--border)] bg-[var(--card-strong)] p-5">
           {xorLevel.rulePairs.map((pair, index) => (
             <div
               key={`${pair.left}-${pair.right}-${index}`}
@@ -605,7 +605,7 @@ export function GameplayExperience({
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-[24px] border border-[var(--border)] bg-white/90 p-5">
+              <div className="rounded-[24px] border border-[var(--border)] bg-[var(--card-strong)] p-5">
                 <p className="text-xs uppercase tracking-[0.25em] text-[var(--ink-muted)]">
                   Scrambled signal
                 </p>
@@ -613,7 +613,7 @@ export function GameplayExperience({
                   {xorLevel.recoveryCipherBits}
                 </p>
               </div>
-              <div className="rounded-[24px] border border-[var(--border)] bg-white/90 p-5">
+              <div className="rounded-[24px] border border-[var(--border)] bg-[var(--card-strong)] p-5">
                 <p className="text-xs uppercase tracking-[0.25em] text-[var(--ink-muted)]">
                   Key signal
                 </p>
@@ -623,7 +623,7 @@ export function GameplayExperience({
               </div>
             </div>
 
-            <div className="rounded-[24px] border border-[var(--border)] bg-white/90 p-5">
+            <div className="rounded-[24px] border border-[var(--border)] bg-[var(--card-strong)] p-5">
               <p className="text-sm font-semibold text-[var(--ink)]">
                 Choose the recovered output bits
               </p>
@@ -670,7 +670,7 @@ export function GameplayExperience({
             </div>
           </div>
         ) : (
-          <div className="rounded-[24px] border border-dashed border-[var(--border-strong)] bg-white/60 px-5 py-4 text-sm text-[var(--ink-muted)]">
+          <div className="rounded-[24px] border border-dashed border-[var(--border-strong)] bg-[var(--card-soft)] px-5 py-4 text-sm text-[var(--ink-muted)]">
             Step 2 unlocks after you solve the XOR rule board.
           </div>
         )}
@@ -698,7 +698,7 @@ export function GameplayExperience({
           {blockCipherLevel.slotLabels.map((slotLabel, index) => (
             <label
               key={slotLabel}
-              className="block rounded-[24px] border border-[var(--border)] bg-white/90 p-5"
+              className="block rounded-[24px] border border-[var(--border)] bg-[var(--card-strong)] p-5"
             >
               <span className="text-sm font-semibold text-[var(--ink)]">{slotLabel}</span>
               <select
@@ -711,7 +711,7 @@ export function GameplayExperience({
                     ),
                   );
                 }}
-                className="mt-4 w-full rounded-2xl border border-[var(--border-strong)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent-strong)]"
+                className="mt-4 w-full rounded-2xl border border-[var(--border-strong)] bg-[var(--card-soft)] px-4 py-3 text-[var(--ink)] outline-none transition focus:border-[var(--accent-strong)]"
               >
                 <option value="">Choose a stage</option>
                 {blockCipherLevel.choices.map((choice) => (
@@ -724,11 +724,11 @@ export function GameplayExperience({
           ))}
         </div>
         {blockFeedback.length > 0 ? (
-          <div className="rounded-[24px] border border-amber-200 bg-amber-50 p-5">
-            <p className="text-sm font-semibold text-amber-900">Pipeline feedback</p>
-            <ul className="mt-3 space-y-2 text-sm text-amber-900">
+          <div className="rounded-[24px] border border-amber-500/30 bg-amber-500/12 p-5">
+            <p className="text-sm font-semibold text-amber-100">Pipeline feedback</p>
+            <ul className="mt-3 space-y-2 text-sm text-amber-100">
               {blockFeedback.map((message) => (
-                <li key={message} className="rounded-2xl bg-white/75 px-3 py-2">
+                <li key={message} className="rounded-2xl bg-[var(--card-strong)] px-3 py-2">
                   {message}
                 </li>
               ))}
@@ -745,13 +745,13 @@ export function GameplayExperience({
   const revealedHints = currentLevel.hints.slice(0, revealedHintCount);
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-      <Card className="p-8">
+    <div className="mx-auto grid w-full max-w-5xl gap-4 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
+      <Card className="p-5 sm:p-7">
         <div className="space-y-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-3">
               <p className="font-mono text-xs uppercase tracking-[0.3em] text-[var(--accent-strong)]">
-                Gameplay
+                Mission
               </p>
               <h2 className="text-2xl font-semibold text-[var(--ink)]">
                 {currentLevel.title}
@@ -775,7 +775,7 @@ export function GameplayExperience({
           </div>
 
           {statusMessage ? (
-            <div className="rounded-[24px] border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+            <div className="rounded-[24px] border border-sky-500/30 bg-sky-500/12 px-4 py-3 text-sm text-sky-100">
               {statusMessage}
             </div>
           ) : null}
@@ -785,41 +785,6 @@ export function GameplayExperience({
             : currentLevelId === "xor-stream"
               ? renderXorLevel()
               : renderBlockCipherLevel()}
-
-          <div className="rounded-[24px] border border-[var(--border)] bg-[var(--card)]/80 p-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm font-semibold text-[var(--ink)]">Hints</p>
-                <p className="mt-1 text-sm text-[var(--ink-muted)]">
-                  Hints unlock after repeated failed attempts or 30 seconds of inactivity.
-                </p>
-              </div>
-              <Button
-                variant="secondary"
-                onClick={handleRevealHint}
-                disabled={revealedHintCount >= unlockedHintCount}
-              >
-                {unlockedHintCount === 0
-                  ? "No hint unlocked yet"
-                  : revealedHintCount < unlockedHintCount
-                    ? "Open next hint"
-                    : "All unlocked hints opened"}
-              </Button>
-            </div>
-            {revealedHints.length > 0 ? (
-              <div className="mt-4 space-y-3">
-                {revealedHints.map((hint, index) => (
-                  <div
-                    key={hint}
-                    className="rounded-2xl border border-white/60 bg-white px-4 py-3 text-sm text-[var(--ink-muted)]"
-                  >
-                    <span className="font-semibold text-[var(--ink)]">Hint {index + 1}.</span>{" "}
-                    {hint}
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </div>
 
           {completedByLevel[currentLevelId] ? (
             <div className="flex justify-end">
@@ -835,13 +800,57 @@ export function GameplayExperience({
         </div>
       </Card>
 
-      <CodexPanel
-        activeEntryId={activeCodexEntry}
-        isOpen={codexOpen}
-        onSelectEntry={handleCodexEntrySelect}
-        onToggle={handleCodexToggle}
-        unlockedEntries={unlockedCodexEntries}
-      />
+      <div className="space-y-4 lg:sticky lg:top-4">
+        <Card className="p-5">
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <p className="font-mono text-xs uppercase tracking-[0.28em] text-[var(--accent-strong)]">
+                Hints
+              </p>
+              <p className="text-sm text-[var(--ink-muted)]">
+                Unlock after repeated failed attempts or 30 seconds of inactivity.
+              </p>
+            </div>
+            <Button
+              variant="secondary"
+              onClick={handleRevealHint}
+              disabled={revealedHintCount >= unlockedHintCount}
+              fullWidth
+            >
+              {unlockedHintCount === 0
+                ? "No hint yet"
+                : revealedHintCount < unlockedHintCount
+                  ? "Open next hint"
+                  : "All hints opened"}
+            </Button>
+            {revealedHints.length > 0 ? (
+              <div className="space-y-3">
+                {revealedHints.map((hint, index) => (
+                  <div
+                    key={hint}
+                    className="rounded-2xl border border-[var(--border)] bg-[var(--card-strong)] px-4 py-3 text-sm text-[var(--ink-muted)]"
+                  >
+                    <span className="font-semibold text-[var(--ink)]">Hint {index + 1}.</span>{" "}
+                    {hint}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-[var(--border-strong)] bg-[var(--card-soft)] px-4 py-3 text-sm text-[var(--ink-muted)]">
+                Keep testing the puzzle to unlock help.
+              </div>
+            )}
+          </div>
+        </Card>
+
+        <CodexPanel
+          activeEntryId={activeCodexEntry}
+          isOpen={codexOpen}
+          onSelectEntry={handleCodexEntrySelect}
+          onToggle={handleCodexToggle}
+          unlockedEntries={unlockedCodexEntries}
+        />
+      </div>
     </div>
   );
 }

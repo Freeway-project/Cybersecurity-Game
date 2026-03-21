@@ -1,14 +1,16 @@
 @import "tailwindcss";
 
 :root {
-  --canvas: #f2efe6;
-  --card: #f8f5ec;
-  --ink: #142235;
-  --ink-muted: #526070;
-  --border: rgba(20, 34, 53, 0.08);
-  --border-strong: rgba(20, 34, 53, 0.16);
-  --accent: #4568a8;
-  --accent-strong: #234a8f;
+  --canvas: #07111f;
+  --card: #0d1a2d;
+  --card-strong: #13233b;
+  --card-soft: #101c31;
+  --ink: #edf4ff;
+  --ink-muted: #98a9c2;
+  --border: rgba(152, 169, 194, 0.14);
+  --border-strong: rgba(152, 169, 194, 0.28);
+  --accent: #2d7ff9;
+  --accent-strong: #4e9bff;
 }
 
 @theme inline {
@@ -29,10 +31,17 @@ html {
 body {
   margin: 0;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0)),
+    radial-gradient(circle at top, rgba(45, 127, 249, 0.16), transparent 34%),
+    radial-gradient(circle at bottom right, rgba(78, 155, 255, 0.12), transparent 28%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0)),
     var(--canvas);
   color: var(--ink);
   font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+}
+
+html,
+body {
+  min-height: 100%;
 }
 
 a {

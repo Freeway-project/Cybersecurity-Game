@@ -11,7 +11,7 @@ export function Card({
   return (
     <section
       className={[
-        "rounded-[28px] border border-white/60 bg-white/86 p-6 shadow-[0_24px_80px_rgba(28,40,82,0.12)] backdrop-blur",
+        "rounded-[28px] border border-[var(--border)] bg-[var(--card)]/92 p-6 shadow-[0_28px_80px_rgba(0,0,0,0.32)] backdrop-blur",
         className,
       ]
         .filter(Boolean)

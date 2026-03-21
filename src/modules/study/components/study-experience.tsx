@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-import { assessmentItems, likertLabels, priorExperienceLabels, studyCopy, studyStepLabels, surveyItems } from "@/config/study";
+import { assessmentItems, likertLabels, priorExperienceLabels, studyCopy, surveyItems } from "@/config/study";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SiteShell } from "@/components/layout/site-shell";
@@ -10,14 +10,12 @@ import { GameplayExperience } from "@/modules/game";
 import { sendStudyEvent } from "@/modules/instrumentation/client";
 import {
   priorCryptoExperienceOptions,
-  studySteps,
   type AssessmentItemId,
   type ConsentResponse,
   type InputType,
   type LikertScore,
   type PriorCryptoExperience,
   type StudyStep,
-  type StudyStep as StudyStepType,
   type TokenResolutionResponse,
   type ViewportInfo,
 } from "@/types/study";
@@ -36,8 +34,6 @@ interface PersistedStudyState {
 interface StudyExperienceProps {
   initialToken: string | null;
 }
-
-type ProgressStep = Exclude<StudyStepType, "landing" | "complete">;
 
 interface ConsentFormState {
   cohort: string;
@@ -108,14 +104,6 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const loggedStepsRef = useRef<Set<StudyStep>>(new Set());
-
-  const progressSteps = useMemo(
-    () =>
-      studySteps.filter(
-        (step): step is ProgressStep => !["landing", "complete"].includes(step),
-      ),
-    [],
-  );
 
   const participantId = tokenState?.participantId ?? "";
   const tokenKey = initialToken ?? "__dev__";
@@ -258,8 +246,6 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
       });
     }
   }, [currentStep, participantId, sessionId]);
-
-  const activeIndex = progressSteps.indexOf(currentStep as Exclude<StudyStep, "landing" | "complete">);
 
   async function handleConsentSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -486,7 +472,7 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
                       cohort: event.target.value,
                     }))
                   }
-                  className="w-full rounded-2xl border border-[var(--border-strong)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent-strong)]"
+                  className="w-full rounded-2xl border border-[var(--border-strong)] bg-[var(--card-strong)] px-4 py-3 text-[var(--ink)] outline-none transition focus:border-[var(--accent-strong)]"
                   placeholder="Optional"
                 />
               </label>
@@ -500,7 +486,7 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
                       yearLevel: event.target.value,
                     }))
                   }
-                  className="w-full rounded-2xl border border-[var(--border-strong)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent-strong)]"
+                  className="w-full rounded-2xl border border-[var(--border-strong)] bg-[var(--card-strong)] px-4 py-3 text-[var(--ink)] outline-none transition focus:border-[var(--accent-strong)]"
                   placeholder="Optional"
                 />
               </label>
@@ -517,7 +503,7 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
                     priorCryptoExperience: event.target.value as PriorCryptoExperience,
                   }))
                 }
-                className="w-full rounded-2xl border border-[var(--border-strong)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent-strong)]"
+                className="w-full rounded-2xl border border-[var(--border-strong)] bg-[var(--card-strong)] px-4 py-3 text-[var(--ink)] outline-none transition focus:border-[var(--accent-strong)]"
               >
                 {priorCryptoExperienceOptions.map((option) => (
                   <option key={option} value={option}>
@@ -571,7 +557,7 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
                     {item.options.map((option) => (
                       <label
                         key={option.value}
-                        className="flex cursor-pointer items-start gap-3 rounded-2xl bg-white/80 px-4 py-3 text-sm text-[var(--ink)] transition hover:bg-white"
+                        className="flex cursor-pointer items-start gap-3 rounded-2xl bg-[var(--card-strong)] px-4 py-3 text-sm text-[var(--ink)] transition hover:bg-[var(--card-soft)]"
                       >
                         <input
                           type="radio"
@@ -642,7 +628,7 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
                     {(Object.keys(likertLabels) as unknown as LikertScore[]).map((value) => (
                       <label
                         key={value}
-                        className="flex cursor-pointer flex-col rounded-2xl bg-white/80 px-4 py-3 text-center text-xs text-[var(--ink-muted)] transition hover:bg-white"
+                        className="flex cursor-pointer flex-col rounded-2xl bg-[var(--card-strong)] px-4 py-3 text-center text-xs text-[var(--ink-muted)] transition hover:bg-[var(--card-soft)]"
                       >
                         <span className="text-base font-semibold text-[var(--ink)]">{value}</span>
                         <span className="mt-1">{likertLabels[value]}</span>
@@ -676,7 +662,7 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
                       helpfulComment: event.target.value,
                     }))
                   }
-                  className="min-h-36 w-full rounded-3xl border border-[var(--border-strong)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent-strong)]"
+                  className="min-h-36 w-full rounded-3xl border border-[var(--border-strong)] bg-[var(--card-strong)] px-4 py-3 text-[var(--ink)] outline-none transition focus:border-[var(--accent-strong)]"
                 />
               </label>
               <label className="block space-y-2">
@@ -689,7 +675,7 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
                       confusingComment: event.target.value,
                     }))
                   }
-                  className="min-h-36 w-full rounded-3xl border border-[var(--border-strong)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent-strong)]"
+                  className="min-h-36 w-full rounded-3xl border border-[var(--border-strong)] bg-[var(--card-strong)] px-4 py-3 text-[var(--ink)] outline-none transition focus:border-[var(--accent-strong)]"
                 />
               </label>
             </div>
@@ -723,56 +709,10 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
       eyebrow="Research Pilot"
       title={studyCopy.title}
       description={studyCopy.subtitle}
-      aside={
-        <Card>
-          <div className="space-y-4">
-            <p className="font-mono text-xs uppercase tracking-[0.3em] text-[var(--accent-strong)]">
-              Flow
-            </p>
-            <div className="space-y-3">
-              {studyCopy.sessionOutline.map((item) => (
-                <div
-                  key={item}
-                  className="rounded-2xl border border-[var(--border)] bg-[var(--card)]/70 px-4 py-3 text-sm text-[var(--ink-muted)]"
-                >
-                  {item}
-                </div>
-              ))}
-            </div>
-            {currentStep !== "landing" && currentStep !== "complete" ? (
-              <div className="space-y-3 pt-2">
-                <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-[var(--ink-muted)]">
-                  Progress
-                </p>
-                {progressSteps.map((step, index) => {
-                  const isActive = index === activeIndex;
-                  const isDone = activeIndex > index;
-
-                  return (
-                    <div
-                      key={step}
-                      className={[
-                        "rounded-2xl px-4 py-3 text-sm transition",
-                        isActive
-                          ? "bg-[var(--accent-strong)] text-white"
-                          : isDone
-                            ? "bg-[var(--card)] text-[var(--ink)]"
-                            : "bg-white/70 text-[var(--ink-muted)]",
-                      ].join(" ")}
-                    >
-                      {studyStepLabels[step]}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : null}
-          </div>
-        </Card>
-      }
     >
       <div className="space-y-4">
         {feedback ? (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <div className="rounded-2xl border border-amber-500/30 bg-amber-500/12 px-4 py-3 text-sm text-amber-100">
             {feedback}
           </div>
         ) : null}
