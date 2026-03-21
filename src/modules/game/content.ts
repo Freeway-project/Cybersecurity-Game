@@ -14,6 +14,7 @@ export interface CaesarLevelConfig {
   ciphertext: string;
   targetShift: number;
   plaintext: string;
+  successMessage: string;
   hints: string[];
 }
 
@@ -59,13 +60,15 @@ export const caesarLevel: CaesarLevelConfig = {
   id: "caesar-cipher",
   title: "Level 1: Caesar Cipher",
   mission:
-    "An intercepted route instruction was shifted by a single Caesar offset. Dial the shift until the message reads clearly.",
-  ciphertext: "TLLA HA AOL IYPKNL",
-  targetShift: 7,
-  plaintext: "MEET AT THE BRIDGE",
+    "The spy intercepts a short coded message from an enemy contact. Adjust the Caesar shift until the hidden meeting point becomes readable.",
+  ciphertext: "PHHW DW WKH GRFN",
+  targetShift: 3,
+  plaintext: "MEET AT THE DOCK",
+  successMessage: "Decoded. The message reveals the meeting point: the dock.",
   hints: [
-    "A Caesar shift moves each letter by the same amount. Try common small shifts first, then watch the preview.",
-    "If the slider is correct, the preview will become ordinary English. The target shift for this message is 7.",
+    "This message may only be shifted by a small amount.",
+    "Try moving the letters backward instead of forward.",
+    "A common shift in Caesar examples is 3.",
   ],
 };
 
@@ -144,11 +147,11 @@ export const codexEntries: Record<CodexEntryId, CodexEntry> = {
   "caesar-cipher": {
     id: "caesar-cipher",
     title: "Codex: Caesar Cipher",
-    summary: "A Caesar cipher rotates each alphabetic character by the same fixed shift.",
+    summary: "A Caesar cipher rotates every letter by the same fixed amount.",
     bullets: [
-      "Encryption and decryption use one constant offset across the whole message.",
-      "Trying candidate shifts and checking for readable output is often enough to break it.",
-      "It is a substitution cipher, not modern secure encryption.",
+      "A Caesar cipher shifts every letter by the same number.",
+      "To decrypt, shift letters back by the same amount.",
+      "It is a simple example of a substitution cipher.",
     ],
   },
   "xor-stream": {

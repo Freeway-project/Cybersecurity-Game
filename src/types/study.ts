@@ -24,6 +24,7 @@ export const studyEventNames = [
   "pretest_started",
   "pretest_submitted",
   "level_started",
+  "shift_changed",
   "hint_opened",
   "codex_opened",
   "attempt_submitted",

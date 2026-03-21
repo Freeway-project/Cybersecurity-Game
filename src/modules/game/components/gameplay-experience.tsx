@@ -35,6 +35,10 @@ const taskIds: Record<LevelId, string> = {
   "block-cipher": "role-sequence",
 };
 
+function currentTimestamp() {
+  return Date.now();
+}
+
 function buildLevelCounterState(defaultValue: number) {
   return {
     "caesar-cipher": defaultValue,
@@ -58,6 +62,7 @@ export function GameplayExperience({
 }: GameplayExperienceProps) {
   const [currentLevelIndex, setCurrentLevelIndex] = useState(0);
   const [caesarShift, setCaesarShift] = useState(0);
+  const [caesarShiftChanges, setCaesarShiftChanges] = useState(0);
   const [xorMaskInput, setXorMaskInput] = useState("");
   const [blockSelection, setBlockSelection] = useState<string[]>(["", "", "", ""]);
   const [attemptsByLevel, setAttemptsByLevel] = useState(buildLevelCounterState(0));
@@ -98,7 +103,7 @@ export function GameplayExperience({
   const xorPreview = xorPlaintextHex ? hexToAscii(xorPlaintextHex) : "";
 
   useEffect(() => {
-    lastInteractionRef.current = Date.now();
+    lastInteractionRef.current = currentTimestamp();
   }, []);
 
   useEffect(() => {
@@ -107,7 +112,7 @@ export function GameplayExperience({
     }
 
     startedLevelsRef.current.add(currentLevelId);
-    levelStartTimesRef.current[currentLevelId] = Date.now();
+    levelStartTimesRef.current[currentLevelId] = currentTimestamp();
 
     void sendStudyEvent({
       participantId,
@@ -127,7 +132,7 @@ export function GameplayExperience({
     }
 
     const intervalId = window.setInterval(() => {
-      const elapsed = Date.now() - lastInteractionRef.current;
+      const elapsed = currentTimestamp() - lastInteractionRef.current;
 
       if (elapsed >= 30000) {
         setUnlockedHintsByLevel((previous) => ({
@@ -141,7 +146,7 @@ export function GameplayExperience({
   }, [completedByLevel, currentLevelId]);
 
   function markInteraction() {
-    lastInteractionRef.current = Date.now();
+    lastInteractionRef.current = currentTimestamp();
   }
 
   function unlockCodex(entryId: CodexEntryId) {
@@ -155,7 +160,13 @@ export function GameplayExperience({
     setUnlockedHintsByLevel((previous) => ({
       ...previous,
       [levelId]:
-        attemptNo >= 3 ? Math.max(previous[levelId], 2) : attemptNo >= 2 ? Math.max(previous[levelId], 1) : previous[levelId],
+        attemptNo >= 4
+          ? Math.max(previous[levelId], 3)
+          : attemptNo >= 3
+            ? Math.max(previous[levelId], 2)
+            : attemptNo >= 2
+              ? Math.max(previous[levelId], 1)
+              : previous[levelId],
     }));
   }
 
@@ -193,7 +204,12 @@ export function GameplayExperience({
     });
   }
 
-  function handleSuccessfulAttempt(levelId: LevelId, attemptNo: number, result: string) {
+  function handleSuccessfulAttempt(
+    levelId: LevelId,
+    attemptNo: number,
+    result: string,
+    metadata?: Record<string, unknown>,
+  ) {
     setAttemptsByLevel((previous) => ({
       ...previous,
       [levelId]: attemptNo,
@@ -203,7 +219,7 @@ export function GameplayExperience({
       [levelId]: true,
     }));
 
-    const durationMs = Date.now() - levelStartTimesRef.current[levelId];
+    const durationMs = currentTimestamp() - levelStartTimesRef.current[levelId];
 
     void sendStudyEvent({
       participantId,
@@ -214,6 +230,7 @@ export function GameplayExperience({
       attemptNo,
       result,
       durationMs,
+      metadata,
     });
 
     void sendStudyEvent({
@@ -225,6 +242,7 @@ export function GameplayExperience({
       attemptNo,
       durationMs,
       result: "completed",
+      metadata,
     });
   }
 
@@ -309,9 +327,15 @@ export function GameplayExperience({
       return;
     }
 
-    handleSuccessfulAttempt("caesar-cipher", attemptNo, "correct-shift");
+    handleSuccessfulAttempt("caesar-cipher", attemptNo, "correct-shift", {
+      finalShift: caesarShift,
+      shiftChanges: caesarShiftChanges,
+      plaintext: caesarLevel.plaintext,
+    });
     unlockCodex("caesar-cipher");
-    setStatusMessage("Caesar level cleared. The Codex entry for Caesar cipher is now unlocked.");
+    setStatusMessage(
+      `${caesarLevel.successMessage} The Codex entry for Caesar Cipher is now unlocked.`,
+    );
   }
 
   function submitXorGuess() {
@@ -387,7 +411,20 @@ export function GameplayExperience({
               value={caesarShift}
               onChange={(event) => {
                 markInteraction();
-                setCaesarShift(Number(event.target.value));
+                const nextShift = Number(event.target.value);
+                setCaesarShift(nextShift);
+                setCaesarShiftChanges((previous) => previous + 1);
+                void sendStudyEvent({
+                  participantId,
+                  sessionId,
+                  eventName: "shift_changed",
+                  levelId: "caesar-cipher",
+                  taskId: taskIds["caesar-cipher"],
+                  result: `shift-${nextShift}`,
+                  metadata: {
+                    shift: nextShift,
+                  },
+                });
               }}
               className="mt-4 w-full"
             />
