@@ -41,6 +41,24 @@ export function xorHexStrings(leftHex: string, rightHex: string) {
   return output;
 }
 
+export function xorBitStrings(leftBits: string, rightBits: string) {
+  if (!/^[01]+$/.test(leftBits) || !/^[01]+$/.test(rightBits)) {
+    return null;
+  }
+
+  if (leftBits.length !== rightBits.length) {
+    return null;
+  }
+
+  let output = "";
+
+  for (let index = 0; index < leftBits.length; index += 1) {
+    output += leftBits[index] === rightBits[index] ? "0" : "1";
+  }
+
+  return output;
+}
+
 export function hexToAscii(hex: string) {
   const normalized = normalizeHex(hex);
 

@@ -22,10 +22,15 @@ export interface XorLevelConfig {
   id: "xor-stream";
   title: string;
   mission: string;
-  ciphertextHex: string;
-  maskTextClue: string;
-  targetMaskHex: string;
-  plaintext: string;
+  rulePairs: Array<{
+    left: string;
+    right: string;
+    output: string;
+  }>;
+  recoveryCipherBits: string;
+  recoveryKeyBits: string;
+  recoveryPlaintextBits: string;
+  successMessage: string;
   hints: string[];
 }
 
@@ -74,16 +79,24 @@ export const caesarLevel: CaesarLevelConfig = {
 
 export const xorLevel: XorLevelConfig = {
   id: "xor-stream",
-  title: "Level 2: XOR Stream Cipher",
+  title: "Level 2: Repair the Scrambled Transmission",
   mission:
-    "The captured ciphertext is hex, but the stream mask clue is plain text. Convert the clue to hex first, then align it with the ciphertext.",
-  ciphertextHex: "191306186013",
-  maskTextClue: "MASK42",
-  targetMaskHex: "4d41534b3432",
-  plaintext: "TRUST!",
+    "A stolen briefing is scrambled. Rebuild the XOR rule first, then use the same logic to recover the original signal.",
+  rulePairs: [
+    { left: "1", right: "1", output: "0" },
+    { left: "0", right: "1", output: "1" },
+    { left: "1", right: "0", output: "1" },
+    { left: "0", right: "0", output: "0" },
+  ],
+  recoveryCipherBits: "0110",
+  recoveryKeyBits: "1100",
+  recoveryPlaintextBits: "1010",
+  successMessage:
+    "Recovered. XOR with the same key restored the original signal and the briefing channel is readable again.",
   hints: [
-    "If you type the clue directly as letters, the input is malformed for this level. Convert each text character into hex bytes first.",
-    "The mask text is six characters long, so the hex input must be 12 hex digits: 4d41534b3432.",
+    "Start with the core rule: when two bits are the same, the output is 0.",
+    "When the two bits are different, the output is 1.",
+    "Use that same rule on every column. 0110 XOR 1100 gives 1010.",
   ],
 };
 
@@ -157,11 +170,11 @@ export const codexEntries: Record<CodexEntryId, CodexEntry> = {
   "xor-stream": {
     id: "xor-stream",
     title: "Codex: XOR / Stream Cipher",
-    summary: "XOR combines aligned bytes bit by bit; correct representation matters as much as the math.",
+    summary: "XOR outputs 1 for difference and 0 for a match, which is why the same key can scramble and then restore a signal.",
     bullets: [
-      "Ciphertext, plaintext, and keystream must line up byte for byte.",
-      "Hex is just a representation; the XOR happens on the underlying byte values.",
-      "Malformed or misaligned inputs produce nonsense, even if the idea is right.",
+      "XOR gives 0 when two bits are the same and 1 when they are different.",
+      "Applying XOR with the same key a second time restores the original bits.",
+      "The values still need to line up position by position for the result to make sense.",
     ],
   },
   "block-cipher": {
