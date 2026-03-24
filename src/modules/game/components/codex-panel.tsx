@@ -77,15 +77,20 @@ export function CodexPanel({
                 </ul>
               </>
             ) : (
-              <p className="mt-2 text-base leading-7 text-[var(--ink)]">
-                Clear the matching level to unlock this concept summary.
+              <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
+                Each entry unlocks when you solve its matching level. Check back after completing a level.
               </p>
             )}
           </div>
         </div>
       ) : (
-        <div className="rounded-[24px] border border-[var(--border)] bg-[var(--card-soft)] p-4 text-base font-medium leading-7 text-[var(--ink)]">
-          {unlockedEntries.length}/3 entries unlocked. Open the Codex to review the concepts you have earned.
+        <div className="rounded-[24px] border border-[var(--border)] bg-[var(--card-soft)] p-4">
+          <p className="text-sm font-semibold text-[var(--ink)]">
+            {unlockedEntries.length}/3 entries unlocked
+          </p>
+          <p className="mt-1 text-xs leading-5 text-[var(--ink-muted)]">
+            Complete each level to unlock a concept summary. These entries explain the cryptography behind each puzzle.
+          </p>
         </div>
       )}
     </aside>

@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 
 import { assessmentItems, likertLabels, priorExperienceLabels, studyCopy, surveyItems } from "@/config/study";
-import { getClientEnv } from "@/config/env";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SiteShell } from "@/components/layout/site-shell";
@@ -17,7 +16,6 @@ import {
   type LikertScore,
   type PriorCryptoExperience,
   type StudyStep,
-  type TokenResolutionResponse,
   type ViewportInfo,
 } from "@/types/study";
 
@@ -27,16 +25,16 @@ interface PersistedStudyState {
   currentStep: StudyStep;
   participantId: string;
   sessionId?: string;
-  inviteToken?: string | null;
+  name?: string;
   tokenKey: string;
-  devBypass?: boolean;
 }
 
 interface StudyExperienceProps {
-  initialToken: string | null;
+  initialName: string;
 }
 
 interface ConsentFormState {
+  name: string;
   cohort: string;
   yearLevel: string;
   priorCryptoExperience: PriorCryptoExperience;
@@ -50,12 +48,6 @@ interface SurveyFormState {
   helpfulComment: string;
   confusingComment: string;
 }
-
-const initialConsentForm: ConsentFormState = {
-  cohort: "",
-  yearLevel: "",
-  priorCryptoExperience: "none",
-};
 
 const initialSurveyForm: SurveyFormState = {
   helpfulComment: "",
@@ -85,12 +77,14 @@ async function readJson<T>(response: Response): Promise<T> {
   return (await response.json()) as T;
 }
 
-export function StudyExperience({ initialToken }: StudyExperienceProps) {
-  const devBypassEnabled =
-    process.env.NODE_ENV !== "production" && getClientEnv().NEXT_PUBLIC_ENABLE_DEV_BYPASS;
-  const [tokenState, setTokenState] = useState<TokenResolutionResponse | null>(null);
-  const [currentStep, setCurrentStep] = useState<StudyStep>("landing");
-  const [consentForm, setConsentForm] = useState<ConsentFormState>(initialConsentForm);
+export function StudyExperience({ initialName }: StudyExperienceProps) {
+  const [currentStep, setCurrentStep] = useState<StudyStep>("consent");
+  const [consentForm, setConsentForm] = useState<ConsentFormState>({
+    name: initialName,
+    cohort: "",
+    yearLevel: "",
+    priorCryptoExperience: "none",
+  });
   const [preAnswers, setPreAnswers] = useState<Record<AssessmentItemId, string>>({
     "caesar-basics": "",
     "xor-alignment": "",
@@ -102,15 +96,16 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
     "block-key-iv": "",
   });
   const [surveyForm, setSurveyForm] = useState<SurveyFormState>(initialSurveyForm);
+  const [skippedLevels, setSkippedLevels] = useState<string[]>([]);
+  const [participantId, setParticipantId] = useState<string>("");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const loggedStepsRef = useRef<Set<StudyStep>>(new Set());
 
-  const participantId = tokenState?.participantId ?? "";
-  const tokenKey = initialToken ?? "__dev__";
+  const tokenKey = initialName || "__anon__";
 
+  /* Restore persisted state from localStorage */
   useEffect(() => {
     const storedValue = window.localStorage.getItem(STORAGE_KEY);
 
@@ -121,67 +116,23 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
     try {
       const persisted = JSON.parse(storedValue) as PersistedStudyState;
 
-      if (persisted.tokenKey === tokenKey) {
+      if (persisted.tokenKey === tokenKey && persisted.participantId) {
+        setParticipantId(persisted.participantId);
         setSessionId(persisted.sessionId ?? null);
         setCurrentStep(persisted.currentStep);
-        setTokenState((previous) =>
-          previous
-            ? {
-                ...previous,
-                participantId: persisted.participantId,
-                inviteToken: persisted.inviteToken ?? previous.inviteToken,
-                devBypass: persisted.devBypass ?? previous.devBypass,
-              }
-            : previous,
-        );
+
+        if (persisted.name) {
+          setConsentForm((previous) => ({ ...previous, name: persisted.name! }));
+        }
       }
     } catch {
       window.localStorage.removeItem(STORAGE_KEY);
     }
   }, [tokenKey]);
 
+  /* Persist state to localStorage */
   useEffect(() => {
-    async function resolveCurrentToken() {
-      setLoading(true);
-      setFeedback(null);
-
-      try {
-        const response = await fetch("/api/study/resolve-token", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            token: initialToken,
-          }),
-        });
-
-        const payload = await readJson<TokenResolutionResponse>(response);
-
-        if (!response.ok || !payload.ok) {
-          setTokenState(payload);
-          setCurrentStep("landing");
-          return;
-        }
-
-        setTokenState(payload);
-        setCurrentStep((previous) => (previous === "landing" ? "consent" : previous));
-      } catch (error) {
-        setTokenState({
-          ok: false,
-          status: "invalid",
-          error: error instanceof Error ? error.message : "Unable to resolve invite.",
-        });
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    void resolveCurrentToken();
-  }, [initialToken]);
-
-  useEffect(() => {
-    if (!participantId || currentStep === "landing") {
+    if (!participantId || currentStep === "consent") {
       return;
     }
 
@@ -189,14 +140,14 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
       currentStep,
       participantId,
       sessionId: sessionId ?? undefined,
-      inviteToken: tokenState?.inviteToken,
-      devBypass: tokenState?.devBypass,
+      name: consentForm.name,
       tokenKey,
     };
 
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted));
-  }, [currentStep, participantId, sessionId, tokenKey, tokenState?.devBypass, tokenState?.inviteToken]);
+  }, [currentStep, participantId, sessionId, tokenKey, consentForm.name]);
 
+  /* Log step-entry events */
   useEffect(() => {
     if (!participantId || loggedStepsRef.current.has(currentStep)) {
       return;
@@ -252,6 +203,12 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
 
   async function handleConsentSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (!consentForm.name.trim()) {
+      setFeedback("Please enter your name.");
+      return;
+    }
+
     setSubmitting(true);
     setFeedback(null);
 
@@ -262,8 +219,7 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          participantId,
-          inviteToken: tokenState?.inviteToken ?? null,
+          name: consentForm.name.trim(),
           cohort: consentForm.cohort || undefined,
           yearLevel: consentForm.yearLevel || undefined,
           priorCryptoExperience: consentForm.priorCryptoExperience,
@@ -278,6 +234,7 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
         throw new Error(payload.error ?? "Unable to save consent.");
       }
 
+      setParticipantId(payload.participantId);
       setSessionId(payload.sessionId);
       setCurrentStep("pretest");
     } catch (error) {
@@ -378,6 +335,7 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
           participantId,
           sessionId,
           completed: true,
+          skippedLevels: skippedLevels.length > 0 ? skippedLevels : undefined,
         }),
       });
 
@@ -398,46 +356,6 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
   }
 
   function renderStepCard() {
-    if (loading) {
-      return (
-        <Card className="p-8">
-          <p className="font-mono text-xs uppercase tracking-[0.3em] text-[var(--accent-strong)]">
-            Token Gate
-          </p>
-          <h2 className="mt-4 text-2xl font-semibold text-[var(--ink)]">
-            Resolving your study link
-          </h2>
-          <p className="mt-3 text-[var(--ink-muted)]">
-            Verifying the invite token and preparing the anonymous participant session.
-          </p>
-        </Card>
-      );
-    }
-
-    if (!tokenState?.ok) {
-      return (
-        <Card className="space-y-4 p-8">
-          <p className="font-mono text-xs uppercase tracking-[0.3em] text-[var(--accent-strong)]">
-            Access
-          </p>
-          <h2 className="text-2xl font-semibold text-[var(--ink)]">
-            {tokenState?.status === "completed" ? "Pilot already completed" : "Invite token required"}
-          </h2>
-          <p className="text-[var(--ink-muted)]">
-            {tokenState?.error ??
-              "This study link could not be verified. Use the invite link exactly as it was sent."}
-          </p>
-          {devBypassEnabled ? (
-            <div className="rounded-2xl border border-dashed border-[var(--border-strong)] bg-[var(--card)]/70 p-4 text-sm text-[var(--ink-muted)]">
-              Local development can use the dev bypass when
-              {" "}
-              <code>NEXT_PUBLIC_ENABLE_DEV_BYPASS=true</code>.
-            </div>
-          ) : null}
-        </Card>
-      );
-    }
-
     if (currentStep === "consent") {
       return (
         <Card className="p-8">
@@ -457,12 +375,29 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
                 </li>
               ))}
             </ul>
+            <label className="block space-y-2">
+              <span className="text-sm font-medium text-[var(--ink)]">
+                Your name <span className="text-red-400">*</span>
+              </span>
+              <input
+                value={consentForm.name}
+                onChange={(event) =>
+                  setConsentForm((previous) => ({
+                    ...previous,
+                    name: event.target.value,
+                  }))
+                }
+                className="w-full rounded-2xl border border-[var(--border-strong)] bg-[var(--card-strong)] px-4 py-3 text-[var(--ink)] outline-none transition focus:border-[var(--accent-strong)]"
+                placeholder="Enter your name"
+                required
+              />
+            </label>
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block space-y-2">
                 <span className="text-sm font-medium text-[var(--ink)]">
                   Cohort or course
                 </span>
-                <input
+                <select
                   value={consentForm.cohort}
                   onChange={(event) =>
                     setConsentForm((previous) => ({
@@ -471,12 +406,18 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
                     }))
                   }
                   className="w-full rounded-2xl border border-[var(--border-strong)] bg-[var(--card-strong)] px-4 py-3 text-[var(--ink)] outline-none transition focus:border-[var(--accent-strong)]"
-                  placeholder="Optional"
-                />
+                >
+                  <option value="">Select course (Optional)</option>
+                  <option value="CS">Computer Science (CS)</option>
+                  <option value="IT">Information Technology (IT)</option>
+                  <option value="Science">Science</option>
+                  <option value="Commerce">Commerce</option>
+                  <option value="Other">Other</option>
+                </select>
               </label>
               <label className="block space-y-2">
                 <span className="text-sm font-medium text-[var(--ink)]">Year level</span>
-                <input
+                <select
                   value={consentForm.yearLevel}
                   onChange={(event) =>
                     setConsentForm((previous) => ({
@@ -485,8 +426,14 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
                     }))
                   }
                   className="w-full rounded-2xl border border-[var(--border-strong)] bg-[var(--card-strong)] px-4 py-3 text-[var(--ink)] outline-none transition focus:border-[var(--accent-strong)]"
-                  placeholder="Optional"
-                />
+                >
+                  <option value="">Select year (Optional)</option>
+                  <option value="1st Year">1st Year</option>
+                  <option value="2nd Year">2nd Year</option>
+                  <option value="3rd Year">3rd Year</option>
+                  <option value="4th Year">4th Year</option>
+                  <option value="Other">Other</option>
+                </select>
               </label>
             </div>
             <label className="block space-y-2">
@@ -510,12 +457,7 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
                 ))}
               </select>
             </label>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-[var(--ink-muted)]">
-                Anonymous participant ID:
-                {" "}
-                <span className="font-mono">{participantId}</span>
-              </p>
+            <div className="flex justify-end">
               <Button type="submit" disabled={submitting}>
                 {submitting ? "Saving consent..." : "I agree and want to continue"}
               </Button>
@@ -604,7 +546,8 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
         <GameplayExperience
           participantId={participantId}
           sessionId={sessionId ?? ""}
-          onComplete={() => {
+          onComplete={(skipped) => {
+            setSkippedLevels(skipped);
             setCurrentStep("posttest");
             setFeedback(null);
           }}
@@ -728,12 +671,33 @@ export function StudyExperience({ initialToken }: StudyExperienceProps) {
     );
   }
 
+  const progressSteps = [
+    { key: "consent", label: "Consent" },
+    { key: "pretest", label: "Pre-test" },
+    { key: "game", label: "Game" },
+    { key: "posttest", label: "Post-test" },
+    { key: "survey", label: "Survey" },
+    { key: "complete", label: "Done" },
+  ];
+
+  const stepToProgressIndex: Record<StudyStep, number> = {
+    landing: 0,
+    consent: 0,
+    pretest: 1,
+    "game-placeholder": 2,
+    posttest: 3,
+    survey: 4,
+    complete: 5,
+  };
+
   return (
     <SiteShell
       eyebrow="Research Pilot"
       title={studyCopy.title}
       description={studyCopy.subtitle}
       compact={currentStep === "game-placeholder"}
+      progressSteps={progressSteps}
+      progressCurrent={stepToProgressIndex[currentStep]}
     >
       <div className="space-y-4">
         {feedback ? (

@@ -32,7 +32,6 @@ export const studyCopy = {
     "Participation is voluntary and not graded.",
     "You may stop at any time without penalty.",
     "The pilot stores anonymous gameplay, assessment, and survey responses.",
-    "Invite email records remain separate from the gameplay dataset.",
   ],
   sessionOutline: [
     "Consent and setup",

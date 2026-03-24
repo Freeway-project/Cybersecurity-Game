@@ -17,8 +17,8 @@ import type {
 } from "@/types/study";
 
 const consentSchema = z.object({
-  participantId: z.string().min(1),
-  inviteToken: z.string().nullable().optional(),
+  participantId: z.string().min(1).optional(),
+  name: z.string().trim().min(1, "Name is required"),
   cohort: z.string().trim().max(120).optional(),
   yearLevel: z.string().trim().max(120).optional(),
   priorCryptoExperience: z.enum(["none", "some", "moderate", "strong"]),
@@ -56,18 +56,23 @@ const sessionEndSchema = z.object({
   participantId: z.string().min(1),
   sessionId: z.string().min(1),
   completed: z.boolean(),
+  skippedLevels: z.array(z.string()).optional(),
 });
 
 export async function acceptConsent(rawInput: unknown, userAgent: string | null): Promise<ConsentResponse> {
-  await ensureStudyIndexes();
   const input = consentSchema.parse(rawInput);
   const db = await getMongoDb();
   const now = new Date();
 
-  const existingSession = await db.collection<SessionRecord>("sessions").findOne({
-    participantId: input.participantId,
-    completed: false,
-  });
+  const participantId = input.participantId || randomUUID();
+
+  const [_, existingSession] = await Promise.all([
+    ensureStudyIndexes(),
+    db.collection<SessionRecord>("sessions").findOne({
+      participantId,
+      completed: false,
+    })
+  ]);
 
   const deviceContext = buildDeviceContext({
     userAgent,
@@ -75,76 +80,76 @@ export async function acceptConsent(rawInput: unknown, userAgent: string | null)
     inputType: input.inputType,
   });
 
-  await db.collection<ParticipantRecord>("participants").updateOne(
-    { participantId: input.participantId },
-    {
-      $set: {
-        consentAccepted: true,
-        cohort: input.cohort,
-        yearLevel: input.yearLevel,
-        priorCryptoExperience: input.priorCryptoExperience,
-        updatedAt: now,
-      },
-      $setOnInsert: {
-        participantId: input.participantId,
-        createdAt: now,
-      },
-    },
-    { upsert: true },
-  );
-
   const sessionId = existingSession?.sessionId ?? randomUUID();
 
-  await db.collection<SessionRecord>("sessions").updateOne(
-    { sessionId },
-    {
-      $set: {
-        participantId: input.participantId,
-        deviceType: deviceContext.deviceType,
-        browserFamily: deviceContext.browserFamily,
-        osFamily: deviceContext.osFamily,
-        viewport: deviceContext.viewport,
-        inputType: deviceContext.inputType,
-        completed: false,
+  await Promise.all([
+    db.collection<ParticipantRecord>("participants").updateOne(
+      { participantId },
+      {
+        $set: {
+          consentAccepted: true,
+          name: input.name,
+          cohort: input.cohort,
+          yearLevel: input.yearLevel,
+          priorCryptoExperience: input.priorCryptoExperience,
+          updatedAt: now,
+        },
+        $setOnInsert: {
+          participantId,
+          createdAt: now,
+        },
       },
-      $setOnInsert: {
+      { upsert: true },
+    ),
+    db.collection<SessionRecord>("sessions").updateOne(
+      { sessionId },
+      {
+        $set: {
+          participantId,
+          deviceType: deviceContext.deviceType,
+          browserFamily: deviceContext.browserFamily,
+          osFamily: deviceContext.osFamily,
+          viewport: deviceContext.viewport,
+          inputType: deviceContext.inputType,
+          completed: false,
+        },
+        $setOnInsert: {
+          sessionId,
+          startedAt: now,
+        },
+      },
+      { upsert: true },
+    ),
+    logStudyEvent(
+      {
+        participantId,
         sessionId,
-        startedAt: now,
+        eventName: "consent_accepted",
+        viewport: input.viewport,
+        inputType: input.inputType,
+        metadata: {
+          priorCryptoExperience: input.priorCryptoExperience,
+          name: input.name,
+        },
       },
-    },
-    { upsert: true },
-  );
-
-  await logStudyEvent(
-    {
-      participantId: input.participantId,
-      sessionId,
-      eventName: "consent_accepted",
-      viewport: input.viewport,
-      inputType: input.inputType,
-      metadata: {
-        inviteTokenPresent: Boolean(input.inviteToken),
-        priorCryptoExperience: input.priorCryptoExperience,
+      userAgent,
+    ),
+    logStudyEvent(
+      {
+        participantId,
+        sessionId,
+        eventName: "session_started",
+        viewport: input.viewport,
+        inputType: input.inputType,
       },
-    },
-    userAgent,
-  );
-
-  await logStudyEvent(
-    {
-      participantId: input.participantId,
-      sessionId,
-      eventName: "session_started",
-      viewport: input.viewport,
-      inputType: input.inputType,
-    },
-    userAgent,
-  );
+      userAgent,
+    )
+  ]);
 
   return {
     ok: true,
     sessionId,
-    participantId: input.participantId,
+    participantId,
   };
 }
 
@@ -263,6 +268,7 @@ export async function endSession(rawInput: unknown, userAgent: string | null) {
       $set: {
         completed: input.completed,
         endedAt: new Date(),
+        ...(input.skippedLevels ? { skippedLevels: input.skippedLevels } : {}),
       },
     },
   );
