@@ -1,42 +1,15 @@
+import type { ReactNode } from "react";
+
 import { likertLabels, priorExperienceLabels } from "@/config/study";
 import { Card } from "@/components/ui/card";
-import type {
-  AdminAssessmentAnswerReport,
-  AdminLevelReport,
-  AdminOverview,
-  AdminParticipantReportRow,
-} from "@/modules/admin/server";
-import type { AssessmentItemId, LevelId, LikertScore } from "@/types/study";
+import type { AdminOverview, AdminParticipantReportRow } from "@/modules/admin/server";
+import type { LevelId, LikertScore } from "@/types/study";
 
 interface AdminConsoleProps {
   analysisExportHref: string;
   rawExportHref: string;
   overview: AdminOverview;
 }
-
-const assessmentLabels: Record<AssessmentItemId, string> = {
-  "caesar-basics": "Caesar basics",
-  "xor-alignment": "XOR alignment",
-  "block-key-iv": "Block cipher key/IV",
-};
-
-const levelLabels: Record<LevelId, string> = {
-  "caesar-cipher": "Caesar cipher",
-  "xor-stream": "XOR stream",
-  "block-cipher": "Block cipher",
-};
-
-const reportLevelIds: LevelId[] = [
-  "caesar-cipher",
-  "xor-stream",
-  "block-cipher",
-];
-
-const assessmentItemIds: AssessmentItemId[] = [
-  "caesar-basics",
-  "xor-alignment",
-  "block-key-iv",
-];
 
 interface VerticalBarItem {
   label: string;
@@ -60,6 +33,18 @@ interface DualMetricItem {
   secondaryDisplayValue: string;
 }
 
+const levelLabels: Record<LevelId, string> = {
+  "caesar-cipher": "Caesar cipher",
+  "xor-stream": "XOR stream",
+  "block-cipher": "Block cipher",
+};
+
+const reportLevelIds: LevelId[] = [
+  "caesar-cipher",
+  "xor-stream",
+  "block-cipher",
+];
+
 function formatText(value: string | null | undefined, fallback = "Not recorded") {
   return value && value.trim().length > 0 ? value : fallback;
 }
@@ -72,8 +57,12 @@ function formatDurationMs(value: number | null | undefined) {
   return typeof value === "number" ? `${value.toLocaleString()} ms` : "Not recorded";
 }
 
-function formatList(values: string[]) {
-  return values.length > 0 ? values.join(", ") : "None";
+function formatScore(value: number | null | undefined) {
+  return typeof value === "number" ? `${value}/3` : "Not recorded";
+}
+
+function formatPercent(value: number | null | undefined) {
+  return typeof value === "number" ? `${value}%` : "Not recorded";
 }
 
 function formatLikert(value: number | null | undefined) {
@@ -84,12 +73,36 @@ function formatLikert(value: number | null | undefined) {
   return `${value}/5 (${likertLabels[value as LikertScore]})`;
 }
 
-function formatScore(value: number | null | undefined) {
-  return typeof value === "number" ? `${value}/3` : "Not recorded";
+function formatTimestamp(value: string | null | undefined) {
+  if (!value) {
+    return "Not recorded";
+  }
+
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return parsed.toLocaleString("en-CA", {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
-function formatPercent(value: number | null | undefined) {
-  return typeof value === "number" ? `${value}%` : "Not recorded";
+function truncateText(value: string | null | undefined, maxLength = 96) {
+  const normalized = value?.trim() ?? "";
+
+  if (!normalized) {
+    return "None";
+  }
+
+  return normalized.length > maxLength
+    ? `${normalized.slice(0, maxLength - 1)}…`
+    : normalized;
 }
 
 function average(values: number[], digits = 1) {
@@ -109,52 +122,41 @@ function percentage(numerator: number, denominator: number) {
   return Math.round((numerator / denominator) * 1000) / 10;
 }
 
-function formatResearchValue(
-  answer: AdminAssessmentAnswerReport,
-  emptyLabel = "No response",
-) {
-  if (!answer.answer) {
-    return emptyLabel;
-  }
-
-  if (answer.correct === null) {
-    return answer.answer;
-  }
-
-  return `${answer.answer} (${answer.correct ? "correct" : "incorrect"})`;
-}
-
-function SectionTitle({
-  eyebrow,
-  title,
-}: {
-  eyebrow: string;
-  title: string;
-}) {
-  return (
-    <div className="space-y-1">
-      <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-[var(--accent-strong)]">
-        {eyebrow}
-      </p>
-      <h3 className="text-lg font-semibold text-[var(--ink)]">{title}</h3>
-    </div>
+function surveyAverage(row: AdminParticipantReportRow) {
+  return average(
+    [
+      row.helpfulScore,
+      row.hintsScore,
+      row.engagementScore,
+      row.reuseScore,
+    ].flatMap((value) => (typeof value === "number" ? [value] : [])),
   );
 }
 
-function ReportField({
-  label,
-  value,
+function ChartCard({
+  eyebrow,
+  title,
+  description,
+  children,
 }: {
-  label: string;
-  value: string;
+  eyebrow: string;
+  title: string;
+  description: string;
+  children: ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)]/55 px-4 py-3">
-      <dt className="font-mono text-[11px] uppercase tracking-[0.22em] text-[var(--ink-muted)]">
-        {label}
-      </dt>
-      <dd className="mt-2 text-sm leading-6 text-[var(--ink)]">{value}</dd>
-    </div>
+    <Card className="p-5">
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-[var(--accent-strong)]">
+            {eyebrow}
+          </p>
+          <h3 className="text-lg font-semibold text-[var(--ink)]">{title}</h3>
+          <p className="text-sm leading-6 text-[var(--ink-muted)]">{description}</p>
+        </div>
+        {children}
+      </div>
+    </Card>
   );
 }
 
@@ -172,33 +174,6 @@ function SummaryStat({
       </p>
       <p className="mt-3 text-2xl font-semibold text-[var(--ink)]">{value}</p>
     </div>
-  );
-}
-
-function ChartCard({
-  eyebrow,
-  title,
-  description,
-  children,
-}: {
-  eyebrow: string;
-  title: string;
-  description: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <Card className="p-5">
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-[var(--accent-strong)]">
-            {eyebrow}
-          </p>
-          <h3 className="text-lg font-semibold text-[var(--ink)]">{title}</h3>
-          <p className="text-sm leading-6 text-[var(--ink-muted)]">{description}</p>
-        </div>
-        {children}
-      </div>
-    </Card>
   );
 }
 
@@ -307,7 +282,10 @@ function DualMetricChart({
         </span>
       </div>
       {items.map((item) => (
-        <div key={item.label} className="space-y-2 rounded-2xl border border-[var(--border)] bg-[var(--card)]/45 p-4">
+        <div
+          key={item.label}
+          className="space-y-2 rounded-2xl border border-[var(--border)] bg-[var(--card)]/45 p-4"
+        >
           <div className="flex items-center justify-between gap-4">
             <p className="text-sm font-medium text-[var(--ink)]">{item.label}</p>
             <p className="font-mono text-xs text-[var(--ink-muted)]">
@@ -334,239 +312,146 @@ function DualMetricChart({
   );
 }
 
-function AssessmentBlock({
-  itemId,
-  row,
-}: {
-  itemId: AssessmentItemId;
-  row: AdminParticipantReportRow;
-}) {
+function StatusPill({ completed }: { completed: boolean }) {
   return (
-    <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)]/55 p-4">
-      <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[var(--ink-muted)]">
-        {assessmentLabels[itemId]}
-      </p>
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        <ReportField
-          label="Pre-test answer"
-          value={formatResearchValue(row.assessments.pre[itemId])}
-        />
-        <ReportField
-          label="Post-test answer"
-          value={formatResearchValue(row.assessments.post[itemId])}
-        />
-      </div>
-    </div>
+    <span
+      className={[
+        "inline-flex rounded-full border px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.18em]",
+        completed
+          ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-100"
+          : "border-amber-400/30 bg-amber-400/10 text-amber-100",
+      ].join(" ")}
+    >
+      {completed ? "Complete" : "Incomplete"}
+    </span>
   );
 }
 
-function LevelReport({
-  levelId,
-  level,
-}: {
-  levelId: LevelId;
-  level: AdminLevelReport;
-}) {
-  return (
-    <div className="rounded-[24px] border border-[var(--border)] bg-[var(--card)]/55 p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-[var(--accent-strong)]">
-            {levelLabels[levelId]}
-          </p>
-          <p className="mt-2 text-sm text-[var(--ink-muted)]">
-            {level.completed
-              ? "Completed"
-              : level.skipped
-                ? "Skipped"
-                : "No completion event recorded"}
-          </p>
-        </div>
-        <div
-          className={[
-            "rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-[0.18em]",
-            level.completed
-              ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-100"
-              : level.skipped
-                ? "border-amber-400/30 bg-amber-400/10 text-amber-100"
-                : "border-[var(--border-strong)] bg-[var(--card-strong)] text-[var(--ink-muted)]",
-          ].join(" ")}
-        >
-          {level.completed ? "Completed" : level.skipped ? "Skipped" : "Open"}
-        </div>
-      </div>
-      <dl className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        <ReportField label="Started at" value={formatText(level.startedAt)} />
-        <ReportField label="Ended at" value={formatText(level.endedAt)} />
-        <ReportField label="Time spent" value={formatDurationMs(level.durationMs)} />
-        <ReportField label="Attempts" value={formatNumber(level.attemptsTotal)} />
-        <ReportField label="Failed attempts" value={formatNumber(level.attemptsFailed)} />
-        <ReportField
-          label="Successful attempts"
-          value={formatNumber(level.attemptsSucceeded)}
-        />
-        <ReportField label="Hints opened" value={formatNumber(level.hintsOpened)} />
-        <ReportField label="Codex opens" value={formatNumber(level.codexOpened)} />
-        <ReportField
-          label="Codex entries viewed"
-          value={formatList(level.codexEntriesViewed)}
-        />
-      </dl>
-    </div>
-  );
-}
-
-function ParticipantReport({ row }: { row: AdminParticipantReportRow }) {
-  const priorExperienceLabel =
-    priorExperienceLabels[
-      row.priorCryptoExperience as keyof typeof priorExperienceLabels
-    ] ?? formatText(row.priorCryptoExperience, "Not recorded");
+function ResultsTable({ rows }: { rows: AdminParticipantReportRow[] }) {
+  if (rows.length === 0) {
+    return (
+      <Card className="p-6">
+        <p className="text-sm leading-7 text-[var(--ink-muted)]">
+          No participant records are available yet.
+        </p>
+      </Card>
+    );
+  }
 
   return (
-    <Card className="p-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="space-y-2">
-          <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-[var(--accent-strong)]">
-            Participant report
-          </p>
-          <h3 className="text-2xl font-semibold text-[var(--ink)]">
-            {row.name ? `${row.name} (${row.participantId})` : row.participantId}
-          </h3>
-          <p className="text-sm leading-6 text-[var(--ink-muted)]">
-            Session {formatText(row.sessionId)}. Research snapshot for the latest recorded
-            session linked to this participant.
-          </p>
-        </div>
-        <div
-          className={[
-            "rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-[0.2em]",
-            row.completed
-              ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-100"
-              : "border-amber-400/30 bg-amber-400/10 text-amber-100",
-          ].join(" ")}
-        >
-          {row.completed ? "Session complete" : "Session incomplete"}
-        </div>
-      </div>
+    <Card className="overflow-hidden p-0">
+      <div className="overflow-x-auto">
+        <table className="min-w-full border-collapse">
+          <thead className="bg-[var(--card-strong)]/85">
+            <tr className="text-left">
+              {["Participant", "Result", "Assessment", "Gameplay", "Survey", "Comments"].map((header) => (
+                <th
+                  key={header}
+                  className="border-b border-[var(--border)] px-4 py-4 font-mono text-[11px] uppercase tracking-[0.24em] text-[var(--ink-muted)]"
+                >
+                  {header}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => {
+              const priorExperienceLabel =
+                priorExperienceLabels[
+                  row.priorCryptoExperience as keyof typeof priorExperienceLabels
+                ] ?? formatText(row.priorCryptoExperience, "Not recorded");
+              const skippedLevels =
+                row.skippedLevelsCount > 0 ? row.skippedLevels.join(", ") : "None";
+              const surveyMean = surveyAverage(row);
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-2">
-        <section className="space-y-4">
-          <SectionTitle eyebrow="Session" title="Participant and environment" />
-          <dl className="grid gap-3 sm:grid-cols-2">
-            <ReportField label="Cohort" value={formatText(row.cohort)} />
-            <ReportField label="Year level" value={formatText(row.yearLevel)} />
-            <ReportField label="Prior experience" value={priorExperienceLabel} />
-            <ReportField label="Consent accepted" value={row.consentAccepted ? "Yes" : "No"} />
-            <ReportField label="Started at" value={formatText(row.startedAt)} />
-            <ReportField label="Ended at" value={formatText(row.endedAt)} />
-            <ReportField
-              label="Session duration"
-              value={formatDurationMs(row.sessionDurationMs)}
-            />
-            <ReportField label="Viewport" value={formatText(row.viewport)} />
-            <ReportField label="Device type" value={formatText(row.deviceType)} />
-            <ReportField label="Input type" value={formatText(row.inputType)} />
-            <ReportField label="Browser" value={formatText(row.browserFamily)} />
-            <ReportField label="Operating system" value={formatText(row.osFamily)} />
-          </dl>
-        </section>
-
-        <section className="space-y-4">
-          <SectionTitle eyebrow="Outcomes" title="Assessment and learning change" />
-          <dl className="grid gap-3 sm:grid-cols-2">
-            <ReportField label="Pre-test score" value={formatScore(row.preScore)} />
-            <ReportField label="Post-test score" value={formatScore(row.postScore)} />
-            <ReportField label="Score gain" value={formatNumber(row.scoreGain)} />
-            <ReportField
-              label="Levels completed"
-              value={`${row.levelsCompletedCount}/3`}
-            />
-            <ReportField
-              label="Pre-test started"
-              value={formatText(row.preTestStartedAt)}
-            />
-            <ReportField
-              label="Pre-test submitted"
-              value={formatText(row.preTestSubmittedAt)}
-            />
-            <ReportField
-              label="Pre-test duration"
-              value={formatDurationMs(row.preTestDurationMs)}
-            />
-            <ReportField
-              label="Post-test started"
-              value={formatText(row.postTestStartedAt)}
-            />
-            <ReportField
-              label="Post-test submitted"
-              value={formatText(row.postTestSubmittedAt)}
-            />
-            <ReportField
-              label="Post-test duration"
-              value={formatDurationMs(row.postTestDurationMs)}
-            />
-          </dl>
-          <div className="grid gap-3">
-            {assessmentItemIds.map((itemId) => (
-              <AssessmentBlock key={itemId} itemId={itemId} row={row} />
-            ))}
-          </div>
-        </section>
-
-        <section className="space-y-4 xl:col-span-2">
-          <SectionTitle eyebrow="Telemetry" title="Gameplay interaction report" />
-          <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <ReportField label="Total events" value={formatNumber(row.totalEvents)} />
-            <ReportField label="Total attempts" value={formatNumber(row.totalAttempts)} />
-            <ReportField label="Hints opened" value={formatNumber(row.hintsOpened)} />
-            <ReportField label="Codex opens" value={formatNumber(row.codexOpened)} />
-            <ReportField
-              label="Failed attempts"
-              value={formatNumber(row.attemptsFailed)}
-            />
-            <ReportField
-              label="Successful attempts"
-              value={formatNumber(row.attemptsSucceeded)}
-            />
-            <ReportField
-              label="Caesar shift changes"
-              value={formatNumber(row.caesarShiftChanges)}
-            />
-            <ReportField
-              label="Skipped levels"
-              value={row.skippedLevelsCount > 0 ? formatList(row.skippedLevels) : "None"}
-            />
-            <ReportField
-              label="All codex entries viewed"
-              value={formatList(row.codexEntriesViewed)}
-            />
-          </dl>
-          <div className="grid gap-4">
-            {reportLevelIds.map((levelId) => (
-              <LevelReport key={levelId} levelId={levelId} level={row.levels[levelId]} />
-            ))}
-          </div>
-        </section>
-
-        <section className="space-y-4 xl:col-span-2">
-          <SectionTitle eyebrow="Survey" title="Perception and qualitative feedback" />
-          <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <ReportField label="Helpfulness" value={formatLikert(row.helpfulScore)} />
-            <ReportField label="Hints usefulness" value={formatLikert(row.hintsScore)} />
-            <ReportField label="Engagement" value={formatLikert(row.engagementScore)} />
-            <ReportField label="Reuse intention" value={formatLikert(row.reuseScore)} />
-          </dl>
-          <div className="grid gap-3 xl:grid-cols-2">
-            <ReportField
-              label="Helpful comment"
-              value={formatText(row.helpfulComment, "No comment")}
-            />
-            <ReportField
-              label="Confusing comment"
-              value={formatText(row.confusingComment, "No comment")}
-            />
-          </div>
-        </section>
+              return (
+                <tr
+                  key={row.participantId}
+                  className="align-top transition hover:bg-white/[0.03]"
+                >
+                  <td className="border-b border-[var(--border)] px-4 py-4">
+                    <div className="space-y-1.5">
+                      <p className="font-semibold text-[var(--ink)]">
+                        {row.name || row.participantId}
+                      </p>
+                      <p className="font-mono text-xs text-[var(--ink-muted)]">
+                        {row.participantId}
+                      </p>
+                      <p className="text-xs text-[var(--ink-muted)]">
+                        {formatText(row.cohort, "No cohort")} / {formatText(row.yearLevel, "No year")}
+                      </p>
+                      <p className="text-xs text-[var(--ink-muted)]">
+                        Prior experience: {priorExperienceLabel}
+                      </p>
+                    </div>
+                  </td>
+                  <td className="border-b border-[var(--border)] px-4 py-4">
+                    <div className="space-y-2 text-sm">
+                      <StatusPill completed={row.completed} />
+                      <p className="text-[var(--ink)]">Levels: {row.levelsCompletedCount}/3</p>
+                      <p className="text-[var(--ink-muted)]">
+                        Started: {formatTimestamp(row.startedAt)}
+                      </p>
+                      <p className="text-[var(--ink-muted)]">
+                        Session: {formatDurationMs(row.sessionDurationMs)}
+                      </p>
+                    </div>
+                  </td>
+                  <td className="border-b border-[var(--border)] px-4 py-4">
+                    <div className="space-y-1.5 text-sm">
+                      <p className="text-[var(--ink)]">Pre: {formatScore(row.preScore)}</p>
+                      <p className="text-[var(--ink)]">Post: {formatScore(row.postScore)}</p>
+                      <p className="text-[var(--ink)]">Gain: {formatNumber(row.scoreGain)}</p>
+                      <p className="text-[var(--ink-muted)]">
+                        Pre test: {formatDurationMs(row.preTestDurationMs)}
+                      </p>
+                      <p className="text-[var(--ink-muted)]">
+                        Post test: {formatDurationMs(row.postTestDurationMs)}
+                      </p>
+                    </div>
+                  </td>
+                  <td className="border-b border-[var(--border)] px-4 py-4">
+                    <div className="space-y-1.5 text-sm">
+                      <p className="text-[var(--ink)]">Attempts: {formatNumber(row.totalAttempts)}</p>
+                      <p className="text-[var(--ink)]">Hints: {formatNumber(row.hintsOpened)}</p>
+                      <p className="text-[var(--ink)]">Codex: {formatNumber(row.codexOpened)}</p>
+                      <p className="text-[var(--ink)]">
+                        Shift changes: {formatNumber(row.caesarShiftChanges)}
+                      </p>
+                      <p className="text-[var(--ink-muted)]">Skipped: {skippedLevels}</p>
+                    </div>
+                  </td>
+                  <td className="border-b border-[var(--border)] px-4 py-4">
+                    <div className="space-y-1.5 text-sm">
+                      <p className="text-[var(--ink)]">
+                        Mean: {surveyMean === null ? "Not recorded" : `${surveyMean}/5`}
+                      </p>
+                      <p className="text-[var(--ink-muted)]">
+                        Helpful: {formatLikert(row.helpfulScore)}
+                      </p>
+                      <p className="text-[var(--ink-muted)]">
+                        Engagement: {formatLikert(row.engagementScore)}
+                      </p>
+                      <p className="text-[var(--ink-muted)]">
+                        Reuse: {formatLikert(row.reuseScore)}
+                      </p>
+                    </div>
+                  </td>
+                  <td className="border-b border-[var(--border)] px-4 py-4">
+                    <div className="space-y-2 text-sm">
+                      <p className="text-[var(--ink)]">
+                        Helpful: {truncateText(row.helpfulComment)}
+                      </p>
+                      <p className="text-[var(--ink-muted)]">
+                        Confusing: {truncateText(row.confusingComment)}
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </Card>
   );
@@ -598,17 +483,19 @@ export function AdminConsole({
       toneClass: "bg-gradient-to-t from-amber-500 to-yellow-300",
     },
   ];
-  const levelCompletionItems: HorizontalBarItem[] = reportLevelIds.map((levelId) => ({
-    label: levelLabels[levelId],
-    value: percentage(
+  const levelCompletionItems: HorizontalBarItem[] = reportLevelIds.map((levelId) => {
+    const value = percentage(
       rows.filter((row) => row.levels[levelId].completed).length,
       rows.length,
-    ),
-    displayValue: formatPercent(
-      percentage(rows.filter((row) => row.levels[levelId].completed).length, rows.length),
-    ),
-    toneClass: "bg-gradient-to-r from-emerald-500 to-emerald-300",
-  }));
+    );
+
+    return {
+      label: levelLabels[levelId],
+      value,
+      displayValue: formatPercent(value),
+      toneClass: "bg-gradient-to-r from-emerald-500 to-emerald-300",
+    };
+  });
   const levelDurationItems: VerticalBarItem[] = reportLevelIds.map((levelId) => {
     const averageDuration = average(
       rows.flatMap((row) =>
@@ -685,11 +572,11 @@ export function AdminConsole({
               Research report
             </p>
             <h2 className="text-2xl font-semibold text-[var(--ink)]">
-              Structured admin view for participant-level analysis
+              Open dashboard for research analysis
             </h2>
             <p className="max-w-3xl text-sm leading-7 text-[var(--ink-muted)]">
-              The panel below now mirrors the enriched analysis export: assessment answers,
-              timing, per-level telemetry, survey data, and session-level derived metrics.
+              The panel below mirrors the enriched analysis export with compact charts
+              and a tabular participant results view.
             </p>
           </div>
           <div className="space-y-3">
@@ -757,8 +644,8 @@ export function AdminConsole({
             Graph views for quick interpretation
           </h2>
           <p className="text-sm leading-7 text-[var(--ink-muted)]">
-            These charts summarize the same participant-level report rows shown below and
-            help with faster research review.
+            These charts summarize the same participant rows shown below for faster
+            research review.
           </p>
         </div>
 
@@ -815,26 +702,17 @@ export function AdminConsole({
       <div className="space-y-4">
         <div className="space-y-2">
           <p className="font-mono text-xs uppercase tracking-[0.3em] text-[var(--accent-strong)]">
-            Participant reports
+            Tabular results
           </p>
           <h2 className="text-2xl font-semibold text-[var(--ink)]">
-            Latest session report for each participant
+            Participant results table
           </h2>
           <p className="text-sm leading-7 text-[var(--ink-muted)]">
-            Every card below is built from the same row model used by the analysis CSV,
-            so the on-screen report and exported dataset stay aligned.
+            Compact tabular view of participant names and results so the dashboard
+            stays readable even with many records.
           </p>
         </div>
-
-        {overview.rows.length === 0 ? (
-          <Card className="p-6">
-            <p className="text-sm leading-7 text-[var(--ink-muted)]">
-              No participant records are available yet.
-            </p>
-          </Card>
-        ) : (
-          overview.rows.map((row) => <ParticipantReport key={row.participantId} row={row} />)
-        )}
+        <ResultsTable rows={rows} />
       </div>
     </div>
   );
