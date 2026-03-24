@@ -27,7 +27,8 @@ export default async function AdminPage() {
     <SiteShell
       eyebrow="Pilot Operations"
       title="Study admin console"
-      description="Funnel visibility and exports for the deployed pilot build."
+      description="Structured research reporting across participant records, assessments, gameplay telemetry, and survey feedback."
+      compact
     >
       <div className="space-y-6">
         {isAuthenticated ? (
@@ -60,10 +61,13 @@ export default async function AdminPage() {
                       ))
                     : null}
                 </div>
-                <AdminConsole
-                  analysisExportHref="/api/admin/export/analysis"
-                  rawExportHref="/api/admin/export/raw"
-                />
+                {overview ? (
+                  <AdminConsole
+                    analysisExportHref="/api/admin/export/analysis"
+                    rawExportHref="/api/admin/export/raw"
+                    overview={overview}
+                  />
+                ) : null}
               </>
             )}
           </>
