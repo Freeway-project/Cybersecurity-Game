@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { assessmentItems, likertLabels, priorExperienceLabels, studyCopy, surveyItems } from "@/config/study";
 import { Button } from "@/components/ui/button";
@@ -112,10 +112,13 @@ export function StudyExperience({ initialName }: StudyExperienceProps) {
   const [submitting, setSubmitting] = useState(false);
   const loggedStepsRef = useRef<Set<StudyStep>>(new Set());
 
-  const shuffledAssessmentItems = useMemo(
-    () => assessmentItems.map((item) => ({ ...item, options: shuffleArray(item.options) })),
-    [],
-  );
+  const [shuffledAssessmentItems, setShuffledAssessmentItems] = useState(assessmentItems);
+
+  useEffect(() => {
+    setShuffledAssessmentItems(
+      assessmentItems.map((item) => ({ ...item, options: shuffleArray(item.options) })),
+    );
+  }, []);
 
   const tokenKey = initialName || "__anon__";
 
