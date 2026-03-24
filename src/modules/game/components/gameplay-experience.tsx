@@ -91,6 +91,13 @@ export function GameplayExperience({
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [blockFeedback, setBlockFeedback] = useState<string[]>([]);
+  const [xorRuleFeedback, setXorRuleFeedback] = useState<(string | null)[]>(
+    Array.from({ length: xorLevel.rulePairs.length }, () => null),
+  );
+  const [xorRecoveryFeedback, setXorRecoveryFeedback] = useState<(string | null)[]>(
+    Array.from({ length: xorLevel.recoveryCipherBits.length }, () => null),
+  );
+  const [feedbackGeneration, setFeedbackGeneration] = useState(0);
   const [readyForPosttest, setReadyForPosttest] = useState(false);
   const levelStartTimesRef = useRef<Record<LevelId, number>>({
     "caesar-cipher": 0,
@@ -437,19 +444,35 @@ export function GameplayExperience({
     logAttempt("xor-stream", attemptNo, isCorrect ? "rule-correct" : "rule-wrong");
 
     if (!isCorrect) {
+      const expected = xorLevel.rulePairs.map((p) => p.output);
+      const fb = xorRuleSelection.map((sel, i) =>
+        sel === expected[i] ? "correct" : "wrong",
+      );
+      setXorRuleFeedback(fb);
+      setFeedbackGeneration((g) => g + 1);
+      setTimeout(
+        () => setXorRuleFeedback(Array.from({ length: xorLevel.rulePairs.length }, () => null)),
+        1500,
+      );
       setStatusMessage("Close. Same bits give 0, and different bits give 1.");
       showToast("Not quite. Same bits give 0 and different bits give 1.");
       handleFailedAttempt("xor-stream", attemptNo, "rule-wrong");
       return;
     }
 
+    setXorRuleFeedback(xorLevel.rulePairs.map(() => "correct"));
+    setFeedbackGeneration((g) => g + 1);
+    setTimeout(
+      () => setXorRuleFeedback(Array.from({ length: xorLevel.rulePairs.length }, () => null)),
+      1500,
+    );
     setXorRuleSolved(true);
     handleIntermediateSuccess("xor-stream", attemptNo, "rule-correct", {
       stage: "rule-board",
       outputs: xorRuleAnswer,
     });
     setStatusMessage(
-      "Step 1 complete. Scroll down to Step 2 and recover the briefing by choosing the output bits.",
+      "Decoder calibrated. Scroll down to Phase 2 and recover the transmission.",
     );
   }
 
@@ -473,12 +496,28 @@ export function GameplayExperience({
     );
 
     if (!isCorrect) {
-      setStatusMessage("The signal is still scrambled. Work across the columns one bit at a time.");
-      showToast("Wrong recovery. Compare each pair of bits one column at a time.");
+      const expectedBits = xorExpectedRecovery.split("");
+      const fb = xorRecoverySelection.map((sel, i) =>
+        sel === expectedBits[i] ? "correct" : "wrong",
+      );
+      setXorRecoveryFeedback(fb);
+      setFeedbackGeneration((g) => g + 1);
+      setTimeout(
+        () => setXorRecoveryFeedback(Array.from({ length: xorLevel.recoveryCipherBits.length }, () => null)),
+        1500,
+      );
+      setStatusMessage("The signal is still scrambled. Work across the channels one bit at a time.");
+      showToast("Wrong recovery. Compare each pair of bits one channel at a time.");
       handleFailedAttempt("xor-stream", attemptNo, "recovery-wrong");
       return;
     }
 
+    setXorRecoveryFeedback(xorLevel.recoveryCipherBits.split("").map(() => "correct"));
+    setFeedbackGeneration((g) => g + 1);
+    setTimeout(
+      () => setXorRecoveryFeedback(Array.from({ length: xorLevel.recoveryCipherBits.length }, () => null)),
+      1500,
+    );
     handleSuccessfulAttempt("xor-stream", attemptNo, "recovery-correct", {
       stage: "signal-recovery",
       recoveredBits: xorRecoveryPreview,
@@ -569,158 +608,305 @@ export function GameplayExperience({
   }
 
   function renderXorLevel() {
+    const ruleExpected = xorLevel.rulePairs.map((p) => p.output);
+    const recoveryFilledCount = xorRecoverySelection.filter((v) => v !== "").length;
+    const recoveryTotalBits = xorLevel.recoveryCipherBits.length;
+
     return (
       <div className="space-y-5">
+        {/* ── Phase 1 Header ── */}
         <div className="rounded-[24px] border border-[var(--border)] bg-[var(--card)]/75 p-5">
           <p className="font-mono text-xs uppercase tracking-[0.28em] text-[var(--accent-strong)]">
-            Step 1
+            Phase 1 &middot; Signal Analysis
           </p>
           <h3 className="mt-3 text-2xl font-semibold text-[var(--ink)]">
-            Rebuild the XOR rule
+            Calibrate the XOR Decoder
           </h3>
           <p className="mt-2 text-base leading-7 text-[var(--ink-muted)]">
-            Same bits produce 0. Different bits produce 1. Choose the output for each signal pair.
+            When two signal bits match, the decoder outputs 0. When they differ, it outputs 1. Toggle each output channel to calibrate.
           </p>
         </div>
 
+        {/* ── Phase 1 Circuit Board Rows ── */}
         <div className="space-y-3 rounded-[24px] border border-[var(--border)] bg-[var(--card-strong)] p-5">
-          {xorLevel.rulePairs.map((pair, index) => (
-            <div
-              key={`${pair.left}-${pair.right}-${index}`}
-              className="grid gap-3 rounded-2xl border border-[var(--border)] bg-[var(--card)]/55 px-4 py-4 md:grid-cols-[1fr_1fr_auto_1fr]"
-            >
-              <div>
-                <p className="text-xs uppercase tracking-[0.25em] text-[var(--ink-muted)]">
-                  Signal A
-                </p>
-                <p className="mt-2 font-mono text-2xl text-[var(--ink)]">{pair.left}</p>
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-[0.25em] text-[var(--ink-muted)]">
-                  Key signal
-                </p>
-                <p className="mt-2 font-mono text-2xl text-[var(--ink)]">{pair.right}</p>
-              </div>
-              <div className="hidden items-center justify-center text-sm font-semibold text-[var(--ink-muted)] md:flex">
-                XOR
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-[0.25em] text-[var(--ink-muted)]">
-                  Output
-                </p>
-                <div className="mt-2 flex gap-2">
-                  {["0", "1"].map((value) => (
-                    <Button
-                      key={value}
-                      variant={xorRuleSelection[index] === value ? "primary" : "secondary"}
-                      onClick={() => chooseBit(index, value, setXorRuleSelection)}
-                      className="min-w-14 px-5 py-3 font-mono text-lg"
-                    >
-                      {value}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ))}
+          {xorLevel.rulePairs.map((pair, index) => {
+            const isActive = xorRuleSelection[index] !== "";
+            const fb = xorRuleFeedback[index];
+            const feedbackClass = fb === "correct" ? "xor-row-correct" : fb === "wrong" ? "xor-row-wrong" : "";
 
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="rounded-2xl bg-[var(--card)] px-4 py-3 text-sm text-[var(--ink-muted)]">
-              Current outputs:
-              {" "}
-              <span className="font-mono text-base text-[var(--ink)]">
-                {xorRuleAnswer || "----"}
-              </span>
-            </div>
-            <Button onClick={submitXorRuleBoard}>Check XOR rule</Button>
-          </div>
-        </div>
-
-        {xorRuleSolved ? (
-          <div ref={xorStepTwoRef} className="space-y-5">
-            <div className="rounded-[24px] border border-[var(--accent-strong)]/35 bg-[var(--accent)]/14 px-5 py-4 text-sm text-sky-100">
-              Step 1 is complete. Step 2 is now unlocked below. Use the scrambled signal and key signal to choose the recovered bits.
-            </div>
-            <div className="rounded-[24px] border border-[var(--border)] bg-[var(--card)]/75 p-5">
-              <p className="font-mono text-xs uppercase tracking-[0.28em] text-[var(--accent-strong)]">
-                Step 2
-              </p>
-              <h3 className="mt-3 text-2xl font-semibold text-[var(--ink)]">
-                Recover the briefing
-              </h3>
-              <p className="mt-2 text-base leading-7 text-[var(--ink-muted)]">
-                Apply the same XOR rule to every column. Use the scrambled signal and the key signal to restore the original bits.
-              </p>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-[24px] border border-[var(--border)] bg-[var(--card-strong)] p-5">
-                <p className="text-xs uppercase tracking-[0.25em] text-[var(--ink-muted)]">
-                  Scrambled signal
+            return (
+              <div
+                key={`rule-${pair.left}-${pair.right}-${index}-${feedbackGeneration}`}
+                className={`rounded-2xl border border-[var(--border)] bg-[var(--card)]/55 px-4 py-4 ${feedbackClass}`}
+              >
+                {/* Mobile label */}
+                <p className="mb-3 font-mono text-[0.65rem] uppercase tracking-widest text-[var(--ink-muted)] md:hidden">
+                  Bit Channel {index + 1}
                 </p>
-                <p className="mt-3 font-mono text-[1.8rem] tracking-[0.35em] text-[var(--ink)]">
-                  {xorLevel.recoveryCipherBits}
-                </p>
-              </div>
-              <div className="rounded-[24px] border border-[var(--border)] bg-[var(--card-strong)] p-5">
-                <p className="text-xs uppercase tracking-[0.25em] text-[var(--ink-muted)]">
-                  Key signal
-                </p>
-                <p className="mt-3 font-mono text-[1.8rem] tracking-[0.35em] text-[var(--ink)]">
-                  {xorLevel.recoveryKeyBits}
-                </p>
-              </div>
-            </div>
-
-            <div className="rounded-[24px] border border-[var(--border)] bg-[var(--card-strong)] p-5">
-              <p className="text-base font-semibold text-[var(--ink)]">
-                Choose the recovered output bits
-              </p>
-              <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                {xorLevel.recoveryCipherBits.split("").map((cipherBit, index) => (
-                  <div
-                    key={`${cipherBit}-${xorLevel.recoveryKeyBits[index]}-${index}`}
-                    className="rounded-2xl border border-[var(--border)] bg-[var(--card)]/55 px-4 py-4"
-                  >
-                    <p className="text-xs uppercase tracking-[0.25em] text-[var(--ink-muted)]">
-                      Column {index + 1}
-                    </p>
-                    <p className="mt-2 font-mono text-xl text-[var(--ink)]">
-                      {cipherBit} XOR {xorLevel.recoveryKeyBits[index]}
-                    </p>
-                    <div className="mt-3 flex gap-2">
+                {/* Circuit row */}
+                <div className="flex items-center gap-3">
+                  {/* Input A node */}
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="hidden text-[0.6rem] uppercase tracking-widest text-[var(--ink-muted)] md:block">
+                      Signal
+                    </span>
+                    <div className={`bit-node ${isActive ? "bit-node--active" : ""}`}>
+                      {pair.left}
+                    </div>
+                  </div>
+                  {/* Wire A */}
+                  <div className={`xor-wire flex-1 ${isActive ? "xor-wire--active" : ""}`} />
+                  {/* Input B node */}
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="hidden text-[0.6rem] uppercase tracking-widest text-[var(--ink-muted)] md:block">
+                      Key
+                    </span>
+                    <div className={`bit-node ${isActive ? "bit-node--active" : ""}`}>
+                      {pair.right}
+                    </div>
+                  </div>
+                  {/* Wire B */}
+                  <div className={`xor-wire flex-1 ${isActive ? "xor-wire--active" : ""}`} />
+                  {/* XOR Gate */}
+                  <div className={`xor-gate ${isActive ? "xor-gate--active" : ""}`}>XOR</div>
+                  {/* Wire C */}
+                  <div className={`xor-wire flex-1 ${isActive ? "xor-wire--active" : ""}`} />
+                  {/* Rocker Toggle Output */}
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="hidden text-[0.6rem] uppercase tracking-widest text-[var(--ink-muted)] md:block">
+                      Out
+                    </span>
+                    <div className={`rocker-toggle ${isActive ? "rocker-toggle--active" : ""}`}>
+                      <span
+                        className={`rocker-toggle__pill ${
+                          xorRuleSelection[index] === ""
+                            ? "rocker-toggle__pill--hidden"
+                            : xorRuleSelection[index] === "1"
+                              ? "rocker-toggle__pill--right"
+                              : ""
+                        }`}
+                      />
                       {["0", "1"].map((value) => (
-                        <Button
+                        <button
                           key={value}
-                          variant={
-                            xorRecoverySelection[index] === value ? "primary" : "secondary"
-                          }
-                          onClick={() => chooseBit(index, value, setXorRecoverySelection)}
-                          className="min-w-14 px-5 py-3 font-mono text-lg"
+                          type="button"
+                          className={`rocker-toggle__btn ${
+                            xorRuleSelection[index] === value
+                              ? "rocker-toggle__btn--selected"
+                              : "rocker-toggle__btn--unselected"
+                          }`}
+                          onClick={() => chooseBit(index, value, setXorRuleSelection)}
+                          role="radio"
+                          aria-checked={xorRuleSelection[index] === value}
+                          aria-label={`Output ${value} for bit pair ${pair.left} XOR ${pair.right}`}
                         >
                           {value}
-                        </Button>
+                        </button>
                       ))}
                     </div>
                   </div>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Decoder Output Buffer */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3 rounded-2xl bg-[var(--card)] px-4 py-3">
+              <span className="text-xs uppercase tracking-[0.2em] text-[var(--ink-muted)]">
+                Decoder Output
+              </span>
+              <div className="flex gap-2">
+                {xorRuleSelection.map((bit, i) => (
+                  <div
+                    key={`led-rule-${i}`}
+                    className={`led-dot ${bit !== "" ? "led-dot--on" : ""}`}
+                  >
+                    {bit || "?"}
+                  </div>
                 ))}
               </div>
+            </div>
+            <Button
+              onClick={submitXorRuleBoard}
+              className="font-mono text-sm uppercase tracking-widest px-8"
+            >
+              Run Diagnostics
+            </Button>
+          </div>
+        </div>
 
-              <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="rounded-2xl bg-[var(--card)] px-4 py-3 text-sm text-[var(--ink-muted)]">
-                  Recovered signal:
-                  {" "}
-                  <span className="font-mono text-base text-[var(--ink)]">
-                    {xorRecoveryPreview || "----"}
-                  </span>
+        {/* ── Phase 2 ── */}
+        {xorRuleSolved ? (
+          <div ref={xorStepTwoRef} className="space-y-5 stage-unlock-enter">
+            {/* Unlock banner */}
+            <div className="rounded-[24px] border border-[var(--accent-strong)]/50 bg-[var(--accent)]/14 px-5 py-4 text-center">
+              <p className="font-mono text-xs uppercase tracking-[0.28em] text-[var(--accent-strong)]">
+                Decoder Calibrated
+              </p>
+              <p className="mt-1 text-sm text-sky-100">
+                Phase 2 transmission recovery channel is now online.
+              </p>
+            </div>
+
+            {/* Phase 2 Header */}
+            <div className="rounded-[24px] border border-[var(--border)] bg-[var(--card)]/75 p-5">
+              <p className="font-mono text-xs uppercase tracking-[0.28em] text-[var(--accent-strong)]">
+                Phase 2 &middot; Signal Recovery
+              </p>
+              <h3 className="mt-3 text-2xl font-semibold text-[var(--ink)]">
+                Restore Classified Transmission
+              </h3>
+              <p className="mt-2 text-base leading-7 text-[var(--ink-muted)]">
+                Apply the XOR rule to every bit channel. Route each encrypted bit through the decoder with its key bit to recover the original signal.
+              </p>
+            </div>
+
+            {/* Columnar Circuit Board */}
+            <div className="rounded-[24px] border border-[var(--border)] bg-[var(--card-strong)] p-5">
+              <p className="mb-5 font-mono text-xs uppercase tracking-[0.28em] text-[var(--ink-muted)]">
+                Configure Output Channels
+              </p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-0 md:grid-cols-4 md:gap-x-6">
+                {xorLevel.recoveryCipherBits.split("").map((cipherBit, index) => {
+                  const keyBit = xorLevel.recoveryKeyBits[index];
+                  const isActive = xorRecoverySelection[index] !== "";
+                  const fb = xorRecoveryFeedback[index];
+                  const feedbackClass = fb === "correct" ? "xor-row-correct" : fb === "wrong" ? "xor-row-wrong" : "";
+
+                  return (
+                    <div
+                      key={`recovery-col-${index}-${feedbackGeneration}`}
+                      className={`flex flex-col items-center py-3 ${feedbackClass}`}
+                    >
+                      {/* Channel label */}
+                      <span className="mb-2 font-mono text-[0.6rem] uppercase tracking-widest text-[var(--ink-muted)]">
+                        Ch {index + 1}
+                      </span>
+                      {/* Encrypted bit */}
+                      <div className={`bit-node ${isActive ? "bit-node--active" : ""}`}>
+                        {cipherBit}
+                      </div>
+                      <span className="my-1 text-[0.55rem] uppercase tracking-wider text-[var(--ink-muted)]">
+                        Intercept
+                      </span>
+                      {/* Vertical wire */}
+                      <div
+                        className={`xor-wire-v ${isActive ? "xor-wire-v--active" : ""}`}
+                        style={{ height: "20px" }}
+                      />
+                      {/* Key bit */}
+                      <div className={`bit-node ${isActive ? "bit-node--active" : ""}`}>
+                        {keyBit}
+                      </div>
+                      <span className="my-1 text-[0.55rem] uppercase tracking-wider text-[var(--ink-muted)]">
+                        Key
+                      </span>
+                      {/* Vertical wire */}
+                      <div
+                        className={`xor-wire-v ${isActive ? "xor-wire-v--active" : ""}`}
+                        style={{ height: "12px" }}
+                      />
+                      {/* XOR Gate */}
+                      <div className={`xor-gate ${isActive ? "xor-gate--active" : ""}`}>XOR</div>
+                      {/* Vertical wire */}
+                      <div
+                        className={`xor-wire-v ${isActive ? "xor-wire-v--active" : ""}`}
+                        style={{ height: "12px" }}
+                      />
+                      {/* Output toggle */}
+                      <div className={`rocker-toggle mt-1 ${isActive ? "rocker-toggle--active" : ""}`}>
+                        <span
+                          className={`rocker-toggle__pill ${
+                            xorRecoverySelection[index] === ""
+                              ? "rocker-toggle__pill--hidden"
+                              : xorRecoverySelection[index] === "1"
+                                ? "rocker-toggle__pill--right"
+                                : ""
+                          }`}
+                        />
+                        {["0", "1"].map((value) => (
+                          <button
+                            key={value}
+                            type="button"
+                            className={`rocker-toggle__btn ${
+                              xorRecoverySelection[index] === value
+                                ? "rocker-toggle__btn--selected"
+                                : "rocker-toggle__btn--unselected"
+                            }`}
+                            onClick={() => chooseBit(index, value, setXorRecoverySelection)}
+                            role="radio"
+                            aria-checked={xorRecoverySelection[index] === value}
+                            aria-label={`Output ${value} for channel ${index + 1}: ${cipherBit} XOR ${keyBit}`}
+                          >
+                            {value}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Signal Recovery Meter */}
+            <div className="rounded-[24px] border border-[var(--border)] bg-[var(--card)] p-4">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="font-mono text-xs uppercase tracking-[0.2em] text-[var(--ink-muted)]">
+                  Signal Recovery
+                </span>
+                <span className="font-mono text-xs text-[var(--ink-muted)]">
+                  {recoveryFilledCount}/{recoveryTotalBits} channels
+                </span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-[var(--card-strong)]">
+                <div
+                  className="h-full rounded-full transition-all duration-500 ease-out"
+                  style={{
+                    width: `${(recoveryFilledCount / recoveryTotalBits) * 100}%`,
+                    background: "linear-gradient(90deg, var(--accent), var(--accent-strong))",
+                  }}
+                />
+              </div>
+              <div className="mt-3 flex items-center gap-3 rounded-xl bg-[var(--card-strong)] px-4 py-3">
+                <span className="text-xs uppercase tracking-[0.2em] text-[var(--ink-muted)]">
+                  Decrypted Signal
+                </span>
+                <div className="flex gap-2">
+                  {xorRecoverySelection.map((bit, i) => (
+                    <div
+                      key={`led-recovery-${i}`}
+                      className={`led-dot ${bit !== "" ? "led-dot--on" : ""}`}
+                    >
+                      {bit || "?"}
+                    </div>
+                  ))}
                 </div>
-                <Button onClick={submitXorRecovery}>Recover briefing</Button>
+              </div>
+              <div className="mt-4 flex justify-end">
+                <Button
+                  onClick={submitXorRecovery}
+                  className="font-mono text-sm uppercase tracking-widest px-8"
+                >
+                  Decrypt Transmission
+                </Button>
               </div>
             </div>
           </div>
         ) : (
-          <div className="rounded-[24px] border border-dashed border-[var(--border-strong)] bg-[var(--card-soft)] px-5 py-4 text-sm text-[var(--ink-muted)]">
-            Step 2 unlocks after you solve the XOR rule board.
+          <div className="rounded-[24px] border border-dashed border-[var(--border-strong)] bg-[var(--card-soft)] px-5 py-6 text-center">
+            <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--card)]">
+              <svg width="16" height="18" viewBox="0 0 16 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="1" y="8" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="1.5" className="text-[var(--ink-muted)]" />
+                <path d="M4.5 8V5.5C4.5 3.567 6.067 2 8 2C9.933 2 11.5 3.567 11.5 5.5V8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-[var(--ink-muted)]" />
+              </svg>
+            </div>
+            <p className="font-mono text-xs uppercase tracking-widest text-[var(--ink-muted)]">
+              Phase 2 Locked
+            </p>
+            <p className="mt-1 text-xs text-[var(--ink-muted)]">
+              Complete signal analysis to access the recovery channel
+            </p>
           </div>
         )}
       </div>
@@ -735,7 +921,7 @@ export function GameplayExperience({
             Data Nodes Bank
           </p>
           <p className="mt-2 text-sm text-[var(--ink-muted)]">
-            Select a cryptographic node below, then click an empty sequence socket to deploy it. Click a deployed node to return it to the bank.
+            Drag a cryptographic node below, or click to select, then click or drop it into an empty sequence socket to deploy it. Click a deployed node to return it to the bank.
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-4 sm:gap-6">
             {blockCipherLevel.choices.map((choice) => {
@@ -764,6 +950,10 @@ export function GameplayExperience({
                     style={{ clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)" }}
                   >
                     <button
+                      draggable={!isUsed}
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData("text/plain", choice.id);
+                      }}
                       onClick={() => {
                         if (!isUsed) {
                           markInteraction();
@@ -782,7 +972,7 @@ export function GameplayExperience({
                     >
                       <span className={[
                         "font-mono text-xs font-bold tracking-wider text-center px-1",
-                        isSelected ? "text-[var(--accent-strong)]" : "text-[var(--ink)]"
+                        isSelected || isUsed ? "text-[var(--accent-strong)]" : "text-[var(--ink)]"
                       ].join(" ")}>
                         {choice.label}
                       </span>
@@ -822,6 +1012,24 @@ export function GameplayExperience({
                       currentChoiceId ? "cursor-pointer hover:scale-105" : ""
                     ].join(" ")}
                     style={{ width: "6rem", height: "7rem" }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const draggedId = e.dataTransfer.getData("text/plain");
+                      if (draggedId) {
+                        markInteraction();
+                        setBlockSelection((prev) => {
+                          const next = [...prev];
+                          const existingIndex = next.indexOf(draggedId);
+                          if (existingIndex !== -1) next[existingIndex] = "";
+                          next[index] = draggedId;
+                          return next;
+                        });
+                        setSelectedBlockChoice(null);
+                      }
+                    }}
                   >
                     <div
                       className={[
@@ -865,7 +1073,7 @@ export function GameplayExperience({
                         type="button"
                       >
                         {choiceObj ? (
-                          <span className="font-mono text-[0.65rem] font-bold tracking-wider text-[var(--accent-strong)] text-center px-1">
+                          <span className="font-mono text-[0.65rem] font-bold tracking-wider text-[var(--ink)] drop-shadow-md text-center px-1">
                             {choiceObj.label}
                           </span>
                         ) : (
@@ -912,7 +1120,7 @@ export function GameplayExperience({
   const revealedHints = currentLevel.hints.slice(0, revealedHintCount);
 
   return (
-    <div className="mx-auto grid w-full max-w-[92rem] gap-4 lg:max-h-[calc(100vh-10.5rem)] lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start">
+    <div className="mx-auto grid w-full max-w-[98rem] gap-4 lg:max-h-[calc(100vh-10.5rem)] lg:grid-cols-[16rem_minmax(0,1fr)_20rem] lg:items-start">
       {toast ? (
         <div className="pointer-events-none fixed right-4 top-4 z-50 w-[min(26rem,calc(100vw-2rem))]">
           <div
@@ -927,40 +1135,46 @@ export function GameplayExperience({
           </div>
         </div>
       ) : null}
-      <Card className="p-5 sm:p-6 lg:h-[calc(100vh-10.5rem)] lg:min-h-0">
-        <div className="space-y-5 lg:flex lg:h-full lg:flex-col lg:space-y-4">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-            <div className="space-y-3">
-              <p className="font-mono text-xs uppercase tracking-[0.3em] text-[var(--accent-strong)]">
-                Mission
-              </p>
-              <h2 className="text-2xl font-semibold text-[var(--ink)] sm:text-[1.9rem]">
-                {currentLevel.title}
-              </h2>
-              <p className="max-w-2xl text-base leading-7 text-[var(--ink-muted)]">
-                {currentLevel.mission}
-              </p>
+
+      {/* ── Left Sidebar: Mission + Stats ── */}
+      <div className="space-y-4 lg:h-[calc(100vh-10.5rem)] lg:overflow-auto lg:pr-1">
+        <Card className="p-5">
+          <div className="space-y-3">
+            <p className="font-mono text-xs uppercase tracking-[0.3em] text-[var(--accent-strong)]">
+              Mission
+            </p>
+            <h2 className="text-xl font-semibold text-[var(--ink)] sm:text-2xl">
+              {currentLevel.title}
+            </h2>
+            <p className="text-sm leading-6 text-[var(--ink-muted)]">
+              {currentLevel.mission}
+            </p>
+          </div>
+        </Card>
+        <Card className="p-4">
+          <div className="space-y-3 text-sm text-[var(--ink-muted)]">
+            <div className="flex items-center justify-between">
+              <span>Level</span>
+              <strong className="font-mono text-[var(--ink)]">
+                {currentLevelIndex + 1} / {levelOrder.length}
+              </strong>
             </div>
-            <div className="rounded-[24px] border border-[var(--border)] bg-[var(--card)]/75 px-4 py-4 text-sm text-[var(--ink-muted)]">
-              <div className="flex items-center justify-between gap-8">
-                <span>Level</span>
-                <strong className="text-[var(--ink)]">
-                  {currentLevelIndex + 1} / {levelOrder.length}
-                </strong>
-              </div>
-              <div className="mt-2 flex items-center justify-between gap-8">
-                <span>Attempts</span>
-                <strong className="text-[var(--ink)]">{attempts}</strong>
-              </div>
+            <div className="flex items-center justify-between">
+              <span>Attempts</span>
+              <strong className="font-mono text-[var(--ink)]">{attempts}</strong>
             </div>
           </div>
+        </Card>
+        {statusMessage ? (
+          <Card className="border-sky-500/30 bg-sky-500/12 p-4">
+            <p className="text-sm leading-6 text-sky-100">{statusMessage}</p>
+          </Card>
+        ) : null}
+      </div>
 
-          {statusMessage ? (
-            <div className="rounded-[24px] border border-sky-500/30 bg-sky-500/12 px-4 py-3 text-sm text-sky-100">
-              {statusMessage}
-            </div>
-          ) : null}
-
+      {/* ── Center: Game Area ── */}
+      <Card className="p-5 sm:p-6 lg:h-[calc(100vh-10.5rem)] lg:min-h-0">
+        <div className="space-y-5 lg:flex lg:h-full lg:flex-col lg:space-y-4">
           <div className="lg:min-h-0 lg:flex-1 lg:overflow-auto lg:pr-1">
             {currentLevelId === "caesar-cipher"
               ? renderCaesarLevel()
@@ -983,6 +1197,7 @@ export function GameplayExperience({
         </div>
       </Card>
 
+      {/* ── Right Sidebar: Hints + Codex ── */}
       <div className="space-y-4 lg:h-[calc(100vh-10.5rem)] lg:overflow-auto lg:pr-1">
         <Card className="p-5 lg:p-6">
           <div className="space-y-4">

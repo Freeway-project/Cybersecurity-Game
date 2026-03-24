@@ -59,17 +59,19 @@ const sessionEndSchema = z.object({
 });
 
 export async function acceptConsent(rawInput: unknown, userAgent: string | null): Promise<ConsentResponse> {
-  await ensureStudyIndexes();
   const input = consentSchema.parse(rawInput);
   const db = await getMongoDb();
   const now = new Date();
 
   const participantId = input.participantId || randomUUID();
 
-  const existingSession = await db.collection<SessionRecord>("sessions").findOne({
-    participantId,
-    completed: false,
-  });
+  const [_, existingSession] = await Promise.all([
+    ensureStudyIndexes(),
+    db.collection<SessionRecord>("sessions").findOne({
+      participantId,
+      completed: false,
+    })
+  ]);
 
   const deviceContext = buildDeviceContext({
     userAgent,
@@ -77,72 +79,71 @@ export async function acceptConsent(rawInput: unknown, userAgent: string | null)
     inputType: input.inputType,
   });
 
-  await db.collection<ParticipantRecord>("participants").updateOne(
-    { participantId },
-    {
-      $set: {
-        consentAccepted: true,
-        name: input.name,
-        cohort: input.cohort,
-        yearLevel: input.yearLevel,
-        priorCryptoExperience: input.priorCryptoExperience,
-        updatedAt: now,
-      },
-      $setOnInsert: {
-        participantId,
-        createdAt: now,
-      },
-    },
-    { upsert: true },
-  );
-
   const sessionId = existingSession?.sessionId ?? randomUUID();
 
-  await db.collection<SessionRecord>("sessions").updateOne(
-    { sessionId },
-    {
-      $set: {
+  await Promise.all([
+    db.collection<ParticipantRecord>("participants").updateOne(
+      { participantId },
+      {
+        $set: {
+          consentAccepted: true,
+          name: input.name,
+          cohort: input.cohort,
+          yearLevel: input.yearLevel,
+          priorCryptoExperience: input.priorCryptoExperience,
+          updatedAt: now,
+        },
+        $setOnInsert: {
+          participantId,
+          createdAt: now,
+        },
+      },
+      { upsert: true },
+    ),
+    db.collection<SessionRecord>("sessions").updateOne(
+      { sessionId },
+      {
+        $set: {
+          participantId,
+          deviceType: deviceContext.deviceType,
+          browserFamily: deviceContext.browserFamily,
+          osFamily: deviceContext.osFamily,
+          viewport: deviceContext.viewport,
+          inputType: deviceContext.inputType,
+          completed: false,
+        },
+        $setOnInsert: {
+          sessionId,
+          startedAt: now,
+        },
+      },
+      { upsert: true },
+    ),
+    logStudyEvent(
+      {
         participantId,
-        deviceType: deviceContext.deviceType,
-        browserFamily: deviceContext.browserFamily,
-        osFamily: deviceContext.osFamily,
-        viewport: deviceContext.viewport,
-        inputType: deviceContext.inputType,
-        completed: false,
-      },
-      $setOnInsert: {
         sessionId,
-        startedAt: now,
+        eventName: "consent_accepted",
+        viewport: input.viewport,
+        inputType: input.inputType,
+        metadata: {
+          priorCryptoExperience: input.priorCryptoExperience,
+          name: input.name,
+        },
       },
-    },
-    { upsert: true },
-  );
-
-  await logStudyEvent(
-    {
-      participantId,
-      sessionId,
-      eventName: "consent_accepted",
-      viewport: input.viewport,
-      inputType: input.inputType,
-      metadata: {
-        priorCryptoExperience: input.priorCryptoExperience,
-        name: input.name,
+      userAgent,
+    ),
+    logStudyEvent(
+      {
+        participantId,
+        sessionId,
+        eventName: "session_started",
+        viewport: input.viewport,
+        inputType: input.inputType,
       },
-    },
-    userAgent,
-  );
-
-  await logStudyEvent(
-    {
-      participantId,
-      sessionId,
-      eventName: "session_started",
-      viewport: input.viewport,
-      inputType: input.inputType,
-    },
-    userAgent,
-  );
+      userAgent,
+    )
+  ]);
 
   return {
     ok: true,

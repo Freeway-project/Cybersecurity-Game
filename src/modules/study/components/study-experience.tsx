@@ -395,7 +395,7 @@ export function StudyExperience({ initialName }: StudyExperienceProps) {
                 <span className="text-sm font-medium text-[var(--ink)]">
                   Cohort or course
                 </span>
-                <input
+                <select
                   value={consentForm.cohort}
                   onChange={(event) =>
                     setConsentForm((previous) => ({
@@ -404,12 +404,18 @@ export function StudyExperience({ initialName }: StudyExperienceProps) {
                     }))
                   }
                   className="w-full rounded-2xl border border-[var(--border-strong)] bg-[var(--card-strong)] px-4 py-3 text-[var(--ink)] outline-none transition focus:border-[var(--accent-strong)]"
-                  placeholder="Optional"
-                />
+                >
+                  <option value="">Select course (Optional)</option>
+                  <option value="CS">Computer Science (CS)</option>
+                  <option value="IT">Information Technology (IT)</option>
+                  <option value="Science">Science</option>
+                  <option value="Commerce">Commerce</option>
+                  <option value="Other">Other</option>
+                </select>
               </label>
               <label className="block space-y-2">
                 <span className="text-sm font-medium text-[var(--ink)]">Year level</span>
-                <input
+                <select
                   value={consentForm.yearLevel}
                   onChange={(event) =>
                     setConsentForm((previous) => ({
@@ -418,8 +424,14 @@ export function StudyExperience({ initialName }: StudyExperienceProps) {
                     }))
                   }
                   className="w-full rounded-2xl border border-[var(--border-strong)] bg-[var(--card-strong)] px-4 py-3 text-[var(--ink)] outline-none transition focus:border-[var(--accent-strong)]"
-                  placeholder="Optional"
-                />
+                >
+                  <option value="">Select year (Optional)</option>
+                  <option value="1st Year">1st Year</option>
+                  <option value="2nd Year">2nd Year</option>
+                  <option value="3rd Year">3rd Year</option>
+                  <option value="4th Year">4th Year</option>
+                  <option value="Other">Other</option>
+                </select>
               </label>
             </div>
             <label className="block space-y-2">

@@ -11,6 +11,10 @@
   --border-strong: rgba(152, 169, 194, 0.28);
   --accent: #2d7ff9;
   --accent-strong: #4e9bff;
+  --signal-green: #34d399;
+  --signal-red: #f87171;
+  --wire: rgba(45, 127, 249, 0.25);
+  --wire-active: rgba(78, 155, 255, 0.7);
 }
 
 @theme inline {
@@ -54,4 +58,208 @@ textarea,
 select,
 button {
   font: inherit;
+}
+
+/* ── XOR Level: Circuit Board Theme ── */
+
+@keyframes wire-pulse {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes bit-correct {
+  0% { box-shadow: 0 0 0 0 transparent; }
+  40% { box-shadow: 0 0 14px 3px rgba(52, 211, 153, 0.55); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+@keyframes bit-wrong {
+  0% { transform: translateX(0); box-shadow: 0 0 0 0 transparent; }
+  15% { transform: translateX(-3px); box-shadow: 0 0 10px 2px rgba(248, 113, 113, 0.5); }
+  30% { transform: translateX(3px); }
+  45% { transform: translateX(-2px); }
+  60% { transform: translateX(1px); box-shadow: 0 0 6px 1px rgba(248, 113, 113, 0.3); }
+  100% { transform: translateX(0); box-shadow: 0 0 0 0 transparent; }
+}
+
+@keyframes stage-unlock {
+  0% { opacity: 0; transform: translateY(16px) scale(0.97); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Wire segment */
+.xor-wire {
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(90deg, var(--wire), var(--wire));
+  transition: all 0.4s ease;
+}
+
+.xor-wire--active {
+  background: linear-gradient(90deg, transparent, var(--wire-active), var(--accent), var(--wire-active), transparent);
+  background-size: 200% 100%;
+  animation: wire-pulse 1.8s ease-in-out infinite;
+  box-shadow: 0 0 6px var(--wire-active);
+}
+
+.xor-wire-v {
+  width: 2px;
+  border-radius: 1px;
+  background: var(--wire);
+  transition: all 0.4s ease;
+}
+
+.xor-wire-v--active {
+  background: var(--wire-active);
+  box-shadow: 0 0 6px var(--wire-active);
+}
+
+/* Circuit board bit node */
+.bit-node {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  background: var(--card-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink);
+  flex-shrink: 0;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.bit-node--active {
+  border-color: var(--accent-strong);
+  box-shadow: 0 0 10px rgba(45, 127, 249, 0.35);
+}
+
+/* XOR gate visual */
+.xor-gate {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1.5px solid var(--accent);
+  background: var(--card-strong);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-strong);
+  flex-shrink: 0;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.xor-gate--active {
+  border-color: var(--accent-strong);
+  box-shadow: 0 0 8px rgba(78, 155, 255, 0.4);
+}
+
+/* Rocker toggle switch */
+.rocker-toggle {
+  position: relative;
+  display: inline-flex;
+  border-radius: 9999px;
+  border: 1.5px solid var(--border-strong);
+  background: var(--card);
+  overflow: hidden;
+  transition: border-color 0.3s;
+}
+
+.rocker-toggle--active {
+  border-color: var(--accent);
+}
+
+.rocker-toggle__pill {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: calc(50% - 2px);
+  height: calc(100% - 4px);
+  border-radius: 9999px;
+  background: var(--accent);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.rocker-toggle__pill--right {
+  transform: translateX(100%);
+}
+
+.rocker-toggle__pill--hidden {
+  opacity: 0;
+}
+
+.rocker-toggle__btn {
+  position: relative;
+  z-index: 1;
+  min-width: 40px;
+  padding: 6px 14px;
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-align: center;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.rocker-toggle__btn--selected {
+  color: white;
+}
+
+.rocker-toggle__btn--unselected {
+  color: var(--ink-muted);
+}
+
+/* LED indicator */
+.led-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-strong);
+  background: var(--card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--ink-muted);
+  transition: all 0.3s ease;
+}
+
+.led-dot--on {
+  border-color: var(--accent);
+  background: rgba(45, 127, 249, 0.2);
+  color: var(--ink);
+  box-shadow: 0 0 8px rgba(45, 127, 249, 0.4);
+}
+
+/* Feedback animations on rows */
+.xor-row-correct {
+  animation: bit-correct 600ms ease;
+}
+
+.xor-row-wrong {
+  animation: bit-wrong 400ms ease;
+}
+
+/* Stage 2 unlock */
+.stage-unlock-enter {
+  animation: stage-unlock 500ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .xor-wire--active { animation: none; }
+  .rocker-toggle__pill { transition-duration: 0ms; }
+  .stage-unlock-enter { animation: none; opacity: 1; transform: none; }
+  .xor-row-correct { animation: none; }
+  .xor-row-wrong { animation: none; }
 }
