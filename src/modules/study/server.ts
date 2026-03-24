@@ -17,8 +17,8 @@ import type {
 } from "@/types/study";
 
 const consentSchema = z.object({
-  participantId: z.string().min(1),
-  inviteToken: z.string().nullable().optional(),
+  participantId: z.string().min(1).optional(),
+  name: z.string().trim().min(1, "Name is required"),
   cohort: z.string().trim().max(120).optional(),
   yearLevel: z.string().trim().max(120).optional(),
   priorCryptoExperience: z.enum(["none", "some", "moderate", "strong"]),
@@ -64,8 +64,10 @@ export async function acceptConsent(rawInput: unknown, userAgent: string | null)
   const db = await getMongoDb();
   const now = new Date();
 
+  const participantId = input.participantId || randomUUID();
+
   const existingSession = await db.collection<SessionRecord>("sessions").findOne({
-    participantId: input.participantId,
+    participantId,
     completed: false,
   });
 
@@ -76,17 +78,18 @@ export async function acceptConsent(rawInput: unknown, userAgent: string | null)
   });
 
   await db.collection<ParticipantRecord>("participants").updateOne(
-    { participantId: input.participantId },
+    { participantId },
     {
       $set: {
         consentAccepted: true,
+        name: input.name,
         cohort: input.cohort,
         yearLevel: input.yearLevel,
         priorCryptoExperience: input.priorCryptoExperience,
         updatedAt: now,
       },
       $setOnInsert: {
-        participantId: input.participantId,
+        participantId,
         createdAt: now,
       },
     },
@@ -99,7 +102,7 @@ export async function acceptConsent(rawInput: unknown, userAgent: string | null)
     { sessionId },
     {
       $set: {
-        participantId: input.participantId,
+        participantId,
         deviceType: deviceContext.deviceType,
         browserFamily: deviceContext.browserFamily,
         osFamily: deviceContext.osFamily,
@@ -117,14 +120,14 @@ export async function acceptConsent(rawInput: unknown, userAgent: string | null)
 
   await logStudyEvent(
     {
-      participantId: input.participantId,
+      participantId,
       sessionId,
       eventName: "consent_accepted",
       viewport: input.viewport,
       inputType: input.inputType,
       metadata: {
-        inviteTokenPresent: Boolean(input.inviteToken),
         priorCryptoExperience: input.priorCryptoExperience,
+        name: input.name,
       },
     },
     userAgent,
@@ -132,7 +135,7 @@ export async function acceptConsent(rawInput: unknown, userAgent: string | null)
 
   await logStudyEvent(
     {
-      participantId: input.participantId,
+      participantId,
       sessionId,
       eventName: "session_started",
       viewport: input.viewport,
@@ -144,7 +147,7 @@ export async function acceptConsent(rawInput: unknown, userAgent: string | null)
   return {
     ok: true,
     sessionId,
-    participantId: input.participantId,
+    participantId,
   };
 }
 

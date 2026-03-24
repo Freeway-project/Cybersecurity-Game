@@ -27,7 +27,7 @@ export default async function AdminPage() {
     <SiteShell
       eyebrow="Pilot Operations"
       title="Study admin console"
-      description="Invite generation, funnel visibility, and exports for the deployed pilot build."
+      description="Funnel visibility and exports for the deployed pilot build."
     >
       <div className="space-y-6">
         {isAuthenticated ? (
@@ -64,30 +64,6 @@ export default async function AdminPage() {
                   analysisExportHref="/api/admin/export/analysis"
                   rawExportHref="/api/admin/export/raw"
                 />
-                <Card>
-                  <div className="space-y-4">
-                    <p className="font-mono text-xs uppercase tracking-[0.3em] text-[var(--accent-strong)]">
-                      Recent invites
-                    </p>
-                    <div className="space-y-3">
-                      {overview?.recentInvites.length ? (
-                        overview.recentInvites.map((invite) => (
-                          <div
-                            key={invite.inviteToken}
-                            className="rounded-2xl border border-[var(--border)] bg-[var(--card)]/70 px-4 py-3 text-sm text-[var(--ink-muted)]"
-                          >
-                            <div className="font-medium text-[var(--ink)]">{invite.email}</div>
-                            <div className="mt-1 font-mono text-xs">
-                              token: {invite.inviteToken}
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-[var(--ink-muted)]">No invites created yet.</p>
-                      )}
-                    </div>
-                  </div>
-                </Card>
               </>
             )}
           </>

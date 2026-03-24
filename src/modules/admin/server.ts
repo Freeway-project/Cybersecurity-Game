@@ -10,7 +10,6 @@ import { getMongoDb } from "@/lib/mongodb";
 import { ensureStudyIndexes } from "@/modules/instrumentation/server";
 import type {
   AssessmentRecord,
-  InviteRecord,
   ParticipantRecord,
   SessionRecord,
   StudyEventRecord,
@@ -60,8 +59,7 @@ export async function getAdminOverview() {
   await ensureStudyIndexes();
   const db = await getMongoDb();
 
-  const [invites, participants, sessions, surveys, events] = await Promise.all([
-    db.collection<InviteRecord>("invites").countDocuments(),
+  const [participants, sessions, surveys, events] = await Promise.all([
     db.collection<ParticipantRecord>("participants").countDocuments({
       consentAccepted: true,
     }),
@@ -70,38 +68,22 @@ export async function getAdminOverview() {
     db.collection<StudyEventRecord>("events").countDocuments(),
   ]);
 
-  const [clicked, completed] = await Promise.all([
-    db.collection<InviteRecord>("invites").countDocuments({
-      clickedAt: { $ne: null },
-    }),
-    db.collection<SessionRecord>("sessions").countDocuments({
-      completed: true,
-    }),
-  ]);
-
-  const recentInvites = await db
-    .collection<InviteRecord>("invites")
-    .find({}, { projection: { email: 1, inviteToken: 1, sentAt: 1, clickedAt: 1 } })
-    .sort({ sentAt: -1 })
-    .limit(10)
-    .toArray();
+  const completed = await db.collection<SessionRecord>("sessions").countDocuments({
+    completed: true,
+  });
 
   return {
     counts: {
-      invited: invites,
-      clicked,
       consented: participants,
       started: sessions,
       completed,
       surveyed: surveys,
       events,
     },
-    recentInvites,
   };
 }
 
 const collectionSchema = z.enum([
-  "invites",
   "participants",
   "sessions",
   "events",
@@ -118,8 +100,7 @@ export async function exportRawData(collectionName?: string | null) {
     return db.collection(name).find({}).sort({ _id: 1 }).toArray();
   }
 
-  const [invites, participants, sessions, events, assessments, surveys] = await Promise.all([
-    db.collection("invites").find({}).toArray(),
+  const [participants, sessions, events, assessments, surveys] = await Promise.all([
     db.collection("participants").find({}).toArray(),
     db.collection("sessions").find({}).toArray(),
     db.collection("events").find({}).toArray(),
@@ -128,7 +109,6 @@ export async function exportRawData(collectionName?: string | null) {
   ]);
 
   return {
-    invites,
     participants,
     sessions,
     events,
@@ -141,8 +121,7 @@ export async function exportAnalysisCsv() {
   await ensureStudyIndexes();
   const db = await getMongoDb();
 
-  const [invites, participants, sessions, assessments, surveys, events] = await Promise.all([
-    db.collection<InviteRecord>("invites").find({}).toArray(),
+  const [participants, sessions, assessments, surveys, events] = await Promise.all([
     db.collection<ParticipantRecord>("participants").find({}).toArray(),
     db.collection<SessionRecord>("sessions").find({}).toArray(),
     db.collection<AssessmentRecord>("assessments").find({}).toArray(),
@@ -151,7 +130,6 @@ export async function exportAnalysisCsv() {
   ]);
 
   const rows = participants.map((participant) => {
-    const invite = invites.find((item) => item.participantId === participant.participantId);
     const session = sessions
       .filter((item) => item.participantId === participant.participantId)
       .sort((left, right) => right.startedAt.getTime() - left.startedAt.getTime())[0];
@@ -161,9 +139,7 @@ export async function exportAnalysisCsv() {
 
     return {
       participantId: participant.participantId,
-      inviteToken: invite?.inviteToken ?? "",
-      invitedAt: invite?.sentAt ?? "",
-      clickedAt: invite?.clickedAt ?? "",
+      name: participant.name ?? "",
       consentAccepted: participant.consentAccepted,
       cohort: participant.cohort ?? "",
       yearLevel: participant.yearLevel ?? "",

@@ -79,6 +79,7 @@ export function GameplayExperience({
   const [blockSelection, setBlockSelection] = useState<string[]>(
     buildBitSelectionState(blockCipherLevel.slotLabels.length),
   );
+  const [selectedBlockChoice, setSelectedBlockChoice] = useState<string | null>(null);
   const [attemptsByLevel, setAttemptsByLevel] = useState(buildLevelCounterState(0));
   const [unlockedHintsByLevel, setUnlockedHintsByLevel] = useState(buildLevelCounterState(0));
   const [revealedHintsByLevel, setRevealedHintsByLevel] = useState(buildLevelCounterState(0));
@@ -728,63 +729,181 @@ export function GameplayExperience({
 
   function renderBlockCipherLevel() {
     return (
-      <div className="space-y-5">
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-          {blockCipherLevel.choices.map((choice) => (
-            <div
-              key={choice.id}
-              className="rounded-2xl border border-[var(--border)] bg-[var(--card)]/75 p-4"
-            >
-              <p className="text-base font-semibold text-[var(--ink)]">{choice.label}</p>
-              <p className="mt-2 text-xs leading-5 text-[var(--ink-muted)]">
-                {choice.helper}
-              </p>
-            </div>
-          ))}
+      <div className="space-y-8">
+        <div className="rounded-[24px] border border-[var(--border)] bg-[var(--card)]/75 p-5">
+          <p className="font-mono text-xs uppercase tracking-[0.28em] text-[var(--accent-strong)]">
+            Data Nodes Bank
+          </p>
+          <p className="mt-2 text-sm text-[var(--ink-muted)]">
+            Select a cryptographic node below, then click an empty sequence socket to deploy it. Click a deployed node to return it to the bank.
+          </p>
+          <div className="mt-6 flex flex-wrap justify-center gap-4 sm:gap-6">
+            {blockCipherLevel.choices.map((choice) => {
+              const isSelected = selectedBlockChoice === choice.id;
+              const isUsed = blockSelection.includes(choice.id);
+              
+              return (
+                <div 
+                  key={choice.id}
+                  className={[
+                    "relative transition-all duration-300",
+                    isUsed ? "opacity-20 cursor-not-allowed scale-95" : "cursor-pointer hover:scale-105",
+                    isSelected ? "z-10 scale-110 drop-shadow-[0_0_15px_rgba(56,189,248,0.5)]" : "drop-shadow-sm",
+                  ].join(" ")}
+                  style={{
+                    width: "7rem",
+                    height: "8rem",
+                    filter: isUsed ? "grayscale(100%)" : "none"
+                  }}
+                >
+                  <div
+                    className={[
+                      "absolute inset-0 transition-colors p-[2px]",
+                      isSelected ? "bg-[var(--accent)]" : "bg-[var(--border-strong)]"
+                    ].join(" ")}
+                    style={{ clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)" }}
+                  >
+                    <button
+                      onClick={() => {
+                        if (!isUsed) {
+                          markInteraction();
+                          setSelectedBlockChoice(isSelected ? null : choice.id);
+                        }
+                      }}
+                      disabled={isUsed}
+                      className={[
+                        "flex h-full w-full flex-col items-center justify-center transition-colors",
+                        isSelected 
+                          ? "bg-[var(--accent)]/20" 
+                          : "bg-[var(--card-strong)] hover:bg-[var(--card-soft)]"
+                      ].join(" ")}
+                      style={{ clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)" }}
+                      type="button"
+                    >
+                      <span className={[
+                        "font-mono text-xs font-bold tracking-wider text-center px-1",
+                        isSelected ? "text-[var(--accent-strong)]" : "text-[var(--ink)]"
+                      ].join(" ")}>
+                        {choice.label}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          {blockCipherLevel.slotLabels.map((slotLabel, index) => (
-            <label
-              key={slotLabel}
-              className="block rounded-[24px] border border-[var(--border)] bg-[var(--card-strong)] p-5"
-            >
-              <span className="text-base font-semibold text-[var(--ink)]">{slotLabel}</span>
-              <select
-                value={blockSelection[index]}
-                onChange={(event) => {
-                  markInteraction();
-                  setBlockSelection((previous) =>
-                    previous.map((value, itemIndex) =>
-                      itemIndex === index ? event.target.value : value,
-                    ),
-                  );
-                }}
-                className="mt-4 w-full rounded-2xl border border-[var(--border-strong)] bg-[var(--card-soft)] px-4 py-3 text-[var(--ink)] outline-none transition focus:border-[var(--accent-strong)]"
-              >
-                <option value="">Choose a stage</option>
-                {blockCipherLevel.choices.map((choice) => (
-                  <option key={choice.id} value={choice.id}>
-                    {choice.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ))}
+
+        <div className="relative rounded-[24px] border border-[var(--border)] bg-[var(--card-strong)] p-6">
+          <p className="mb-6 font-mono text-xs uppercase tracking-[0.28em] text-[var(--ink-muted)]">
+            Encryption Sequence Sockets
+          </p>
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between relative">
+            <div className="hidden sm:block absolute left-10 right-10 top-[4rem] h-[2px] bg-[var(--border-strong)] z-0" />
+            
+            {blockCipherLevel.slotLabels.map((slotLabel, index) => {
+              const currentChoiceId = blockSelection[index];
+              const choiceObj = currentChoiceId 
+                ? blockCipherLevel.choices.find((c) => c.id === currentChoiceId) 
+                : null;
+                
+              return (
+                <div key={slotLabel} className="relative z-10 flex flex-1 flex-col items-center group">
+                  <div className="mb-3 h-6 text-center">
+                    <span className="font-mono text-[0.65rem] font-bold uppercase tracking-widest text-[var(--ink-muted)]">
+                      {slotLabel.split(":")[0]}
+                    </span>
+                  </div>
+                  
+                  <div 
+                    className={[
+                      "relative transition-all duration-300",
+                      selectedBlockChoice && !currentChoiceId ? "animate-pulse cursor-pointer hover:scale-105" : "",
+                      currentChoiceId ? "cursor-pointer hover:scale-105" : ""
+                    ].join(" ")}
+                    style={{ width: "6rem", height: "7rem" }}
+                  >
+                    <div
+                      className={[
+                        "absolute inset-0 p-[2px] transition-colors",
+                        currentChoiceId 
+                          ? "bg-[var(--accent-strong)] drop-shadow-[0_0_10px_rgba(56,189,248,0.4)]" 
+                          : selectedBlockChoice 
+                            ? "bg-[var(--accent)]/50" 
+                            : "bg-[var(--border-strong)] opacity-50"
+                      ].join(" ")}
+                      style={{ clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)" }}
+                    >
+                      <button
+                        onClick={() => {
+                          markInteraction();
+                          if (selectedBlockChoice) {
+                            setBlockSelection((prev) => {
+                              const next = [...prev];
+                              const existingIndex = next.indexOf(selectedBlockChoice);
+                              if (existingIndex !== -1) next[existingIndex] = "";
+                              next[index] = selectedBlockChoice;
+                              return next;
+                            });
+                            setSelectedBlockChoice(null);
+                          } else if (currentChoiceId) {
+                            setBlockSelection((prev) => {
+                              const next = [...prev];
+                              next[index] = "";
+                              return next;
+                            });
+                            setSelectedBlockChoice(currentChoiceId);
+                          }
+                        }}
+                        className={[
+                          "flex h-full w-full flex-col items-center justify-center transition-colors",
+                          currentChoiceId 
+                            ? "bg-[var(--accent)]/20" 
+                            : "bg-[var(--card)]"
+                        ].join(" ")}
+                        style={{ clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)" }}
+                        type="button"
+                      >
+                        {choiceObj ? (
+                          <span className="font-mono text-[0.65rem] font-bold tracking-wider text-[var(--accent-strong)] text-center px-1">
+                            {choiceObj.label}
+                          </span>
+                        ) : (
+                          <span className="text-xl text-[var(--ink-muted)] opacity-30">+</span>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 text-center px-1 flex-1">
+                    <p className="text-[0.65rem] leading-snug text-[var(--ink-muted)]">
+                      {choiceObj?.helper || "Empty Socket"}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
+
         {blockFeedback.length > 0 ? (
           <div className="rounded-[24px] border border-amber-500/30 bg-amber-500/12 p-5">
-            <p className="text-sm font-semibold text-amber-100">Pipeline feedback</p>
-            <ul className="mt-3 space-y-2 text-sm text-amber-100">
+            <p className="text-sm font-semibold text-amber-100">System Error Detected</p>
+            <ul className="mt-3 space-y-2 text-sm text-amber-100 font-mono">
               {blockFeedback.map((message) => (
-                <li key={message} className="rounded-2xl bg-[var(--card-strong)] px-3 py-2">
-                  {message}
+                <li key={message} className="flex items-start gap-2">
+                  <span className="mt-0.5 opacity-70">&gt;</span>
+                  <span>{message}</span>
                 </li>
               ))}
             </ul>
           </div>
         ) : null}
-        <div className="flex justify-end">
-          <Button onClick={submitBlockSequence}>Submit sequence</Button>
+        
+        <div className="flex justify-end pt-2">
+          <Button onClick={submitBlockSequence} className="font-mono uppercase tracking-widest text-sm px-8">
+            Deploy Sequence
+          </Button>
         </div>
       </div>
     );

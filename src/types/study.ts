@@ -18,7 +18,6 @@ export const studySteps = [
 ] as const;
 
 export const studyEventNames = [
-  "invite_link_clicked",
   "consent_viewed",
   "consent_accepted",
   "pretest_started",
@@ -88,18 +87,9 @@ export interface DeviceContext {
   inputType: InputType;
 }
 
-export interface InviteRecord {
-  inviteToken: string;
-  participantId: string;
-  email: string;
-  cohort?: string;
-  yearLevel?: string;
-  sentAt: Date;
-  clickedAt?: Date | null;
-}
-
 export interface ParticipantRecord {
   participantId: string;
+  name?: string;
   consentAccepted: boolean;
   cohort?: string;
   yearLevel?: string;
@@ -162,19 +152,9 @@ export interface SurveyRecord {
   submittedAt: Date;
 }
 
-export interface TokenResolutionResponse {
-  ok: boolean;
-  status: "ready" | "resume-available" | "invalid" | "completed";
-  participantId?: string;
-  inviteToken?: string | null;
-  existingSessionId?: string;
-  devBypass?: boolean;
-  error?: string;
-}
-
 export interface ConsentSubmission {
-  participantId: string;
-  inviteToken?: string | null;
+  participantId?: string;
+  name: string;
   cohort?: string;
   yearLevel?: string;
   priorCryptoExperience: PriorCryptoExperience;

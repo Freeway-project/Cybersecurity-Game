@@ -4,7 +4,6 @@ import { buildDeviceContext } from "@/lib/device-context";
 import { getMongoDb } from "@/lib/mongodb";
 import type {
   ClientStudyEventInput,
-  InviteRecord,
   ParticipantRecord,
   SessionRecord,
   StudyEventRecord,
@@ -16,7 +15,6 @@ const eventSchema = z.object({
   participantId: z.string().min(1),
   sessionId: z.string().min(1).nullable().optional(),
   eventName: z.enum([
-    "invite_link_clicked",
     "consent_viewed",
     "consent_accepted",
     "pretest_started",
@@ -62,7 +60,6 @@ export async function ensureStudyIndexes() {
       const db = await getMongoDb();
 
       await Promise.all([
-        db.collection<InviteRecord>("invites").createIndex({ inviteToken: 1 }, { unique: true }),
         db
           .collection<ParticipantRecord>("participants")
           .createIndex({ participantId: 1 }, { unique: true }),
@@ -115,16 +112,3 @@ export async function logStudyEvent(
   await db.collection<StudyEventRecord>("events").insertOne(eventRecord);
 }
 
-export async function markInviteClicked(inviteToken: string) {
-  await ensureStudyIndexes();
-  const db = await getMongoDb();
-
-  await db.collection<InviteRecord>("invites").updateOne(
-    { inviteToken },
-    {
-      $set: {
-        clickedAt: new Date(),
-      },
-    },
-  );
-}

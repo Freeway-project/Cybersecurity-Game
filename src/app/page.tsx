@@ -1,6 +1,23 @@
-import Link from "next/link";
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export default function Home() {
+  const router = useRouter();
+  const [name, setName] = useState("");
+
+  function handleStart(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const trimmed = name.trim();
+
+    if (!trimmed) {
+      return;
+    }
+
+    router.push(`/start?name=${encodeURIComponent(trimmed)}`);
+  }
+
   return (
     <div className="min-h-screen bg-[var(--canvas)] px-5 py-8 sm:px-8">
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 rounded-[36px] border border-[var(--border)] bg-[var(--card)]/92 p-8 shadow-[0_28px_90px_rgba(0,0,0,0.18)] backdrop-blur">
@@ -16,20 +33,30 @@ export default function Home() {
             Participants move through consent, a short pre-test, three small cryptography
             levels, a post-test, and an optional survey.
           </p>
-          <div className="mt-6">
-            <Link
-              href="/start"
+          <form className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={handleStart}>
+            <label className="block flex-1 space-y-2">
+              <span className="text-sm font-medium text-[var(--ink)]">Your name</span>
+              <input
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                className="w-full rounded-2xl border border-[var(--border-strong)] bg-[var(--card-strong)] px-4 py-3 text-[var(--ink)] outline-none transition focus:border-[var(--accent-strong)]"
+                placeholder="Enter your name to begin"
+                required
+              />
+            </label>
+            <button
+              type="submit"
               className="inline-flex items-center justify-center rounded-full bg-[var(--accent-strong)] px-6 py-3 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(25,64,128,0.22)] transition hover:bg-[var(--accent)]"
             >
               Start mission
-            </Link>
-          </div>
+            </button>
+          </form>
         </div>
         <div className="rounded-[30px] border border-[var(--border)] bg-[var(--card-soft)] p-6">
           <h2 className="text-xl font-semibold text-[var(--ink)]">Current build scope</h2>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             {[
-              "Token-gated participant entry",
+              "Name-based participant entry",
               "Consent and session setup",
               "3-item pre-test",
               "3 gameplay levels",

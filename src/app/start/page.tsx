@@ -6,7 +6,7 @@ interface StartPageProps {
 
 export default async function StartPage({ searchParams }: StartPageProps) {
   const params = await searchParams;
-  const token = typeof params.token === "string" ? params.token : null;
+  const name = typeof params.name === "string" ? params.name : "";
 
-  return <StudyExperience initialToken={token} />;
+  return <StudyExperience initialName={name} />;
 }
