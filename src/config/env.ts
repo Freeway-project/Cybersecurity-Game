@@ -3,7 +3,6 @@ import { z } from "zod";
 const serverEnvSchema = z.object({
   MONGODB_URI: z.string().trim().optional(),
   MONGODB_DB_NAME: z.string().trim().default("cybersecurity_game"),
-  ADMIN_SECRET: z.string().trim().optional(),
   APP_BASE_URL: z.string().trim().optional(),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 });

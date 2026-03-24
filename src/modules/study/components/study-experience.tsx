@@ -54,6 +54,15 @@ const initialSurveyForm: SurveyFormState = {
   confusingComment: "",
 };
 
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
 function getViewport(): ViewportInfo | null {
   if (typeof window === "undefined") {
     return null;
@@ -102,6 +111,14 @@ export function StudyExperience({ initialName }: StudyExperienceProps) {
   const [feedback, setFeedback] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const loggedStepsRef = useRef<Set<StudyStep>>(new Set());
+
+  const [shuffledAssessmentItems, setShuffledAssessmentItems] = useState(assessmentItems);
+
+  useEffect(() => {
+    setShuffledAssessmentItems(
+      assessmentItems.map((item) => ({ ...item, options: shuffleArray(item.options) })),
+    );
+  }, []);
 
   const tokenKey = initialName || "__anon__";
 
@@ -485,7 +502,7 @@ export function StudyExperience({ initialName }: StudyExperienceProps) {
               </h2>
             </div>
             <div className="space-y-4">
-              {assessmentItems.map((item, index) => (
+              {shuffledAssessmentItems.map((item, index) => (
                 <div
                   key={item.id}
                   className="rounded-[24px] border border-[var(--border)] bg-[var(--card)]/70 p-5"
