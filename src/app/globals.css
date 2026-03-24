@@ -255,6 +255,17 @@ button {
   animation: stage-unlock 500ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* Hint card glow on first unlock */
+@keyframes hint-glow {
+  0% { border-color: var(--border); box-shadow: none; }
+  30% { border-color: var(--accent-strong); box-shadow: 0 0 16px rgba(78, 155, 255, 0.4); }
+  100% { border-color: var(--border); box-shadow: none; }
+}
+
+.hint-card-glow {
+  animation: hint-glow 1.5s ease;
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .xor-wire--active { animation: none; }
@@ -262,4 +273,5 @@ button {
   .stage-unlock-enter { animation: none; opacity: 1; transform: none; }
   .xor-row-correct { animation: none; }
   .xor-row-wrong { animation: none; }
+  .hint-card-glow { animation: none; }
 }

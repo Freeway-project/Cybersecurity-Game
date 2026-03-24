@@ -1,6 +1,7 @@
 "use client";
 
 import { type Dispatch, type SetStateAction, useEffect, useMemo, useRef, useState } from "react";
+import confetti from "canvas-confetti";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -21,9 +22,9 @@ import { sendStudyEvent } from "@/modules/instrumentation/client";
 import type { CodexEntryId, LevelId } from "@/types/study";
 
 interface GameplayExperienceProps {
-  onComplete: () => void;
   participantId: string;
   sessionId: string;
+  onComplete: (skippedLevels: string[]) => void;
 }
 
 interface ToastState {
@@ -66,6 +67,7 @@ export function GameplayExperience({
   participantId,
   sessionId,
 }: GameplayExperienceProps) {
+  const [showIntro, setShowIntro] = useState(true);
   const [currentLevelIndex, setCurrentLevelIndex] = useState(0);
   const [caesarShift, setCaesarShift] = useState(0);
   const [caesarShiftChanges, setCaesarShiftChanges] = useState(0);
@@ -84,11 +86,13 @@ export function GameplayExperience({
   const [unlockedHintsByLevel, setUnlockedHintsByLevel] = useState(buildLevelCounterState(0));
   const [revealedHintsByLevel, setRevealedHintsByLevel] = useState(buildLevelCounterState(0));
   const [completedByLevel, setCompletedByLevel] = useState(buildLevelBooleanState(false));
+  const [skippedLevels, setSkippedLevels] = useState<Set<LevelId>>(new Set());
   const [unlockedCodexEntries, setUnlockedCodexEntries] = useState<CodexEntryId[]>([]);
   const [codexOpen, setCodexOpen] = useState(false);
   const [activeCodexEntry, setActiveCodexEntry] =
     useState<CodexEntryId>("caesar-cipher");
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [statusTone, setStatusTone] = useState<"success" | "error" | "info">("info");
   const [toast, setToast] = useState<ToastState | null>(null);
   const [blockFeedback, setBlockFeedback] = useState<string[]>([]);
   const [xorRuleFeedback, setXorRuleFeedback] = useState<(string | null)[]>(
@@ -107,6 +111,8 @@ export function GameplayExperience({
   const lastInteractionRef = useRef(0);
   const startedLevelsRef = useRef<Set<LevelId>>(new Set());
   const xorStepTwoRef = useRef<HTMLDivElement | null>(null);
+  const prevUnlockedHintsRef = useRef(0);
+  const [hintCardGlow, setHintCardGlow] = useState(false);
 
   const currentLevel = gameplayLevels[currentLevelIndex];
   const currentLevelId = currentLevel.id;
@@ -191,6 +197,17 @@ export function GameplayExperience({
 
     return () => window.clearTimeout(timeoutId);
   }, [toast]);
+
+  useEffect(() => {
+    if (unlockedHintCount > prevUnlockedHintsRef.current) {
+      showToast("A new hint is available in the sidebar.", "info");
+      setHintCardGlow(true);
+      const timeoutId = window.setTimeout(() => setHintCardGlow(false), 1600);
+      prevUnlockedHintsRef.current = unlockedHintCount;
+      return () => window.clearTimeout(timeoutId);
+    }
+    prevUnlockedHintsRef.current = unlockedHintCount;
+  }, [unlockedHintCount]);
 
   function markInteraction() {
     lastInteractionRef.current = currentTimestamp();
@@ -278,12 +295,35 @@ export function GameplayExperience({
     });
   }
 
+  function fireConfetti() {
+    const end = Date.now() + 1500;
+    const colors = ["#2d7ff9", "#4e9bff", "#34d399", "#fbbf24", "#f472b6"];
+    (function burst() {
+      confetti({
+        particleCount: 3,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0, y: 0.7 },
+        colors,
+      });
+      confetti({
+        particleCount: 3,
+        angle: 120,
+        spread: 55,
+        origin: { x: 1, y: 0.7 },
+        colors,
+      });
+      if (Date.now() < end) requestAnimationFrame(burst);
+    })();
+  }
+
   function handleSuccessfulAttempt(
     levelId: LevelId,
     attemptNo: number,
     result: string,
     metadata?: Record<string, unknown>,
   ) {
+    fireConfetti();
     setAttemptsByLevel((previous) => ({
       ...previous,
       [levelId]: attemptNo,
@@ -320,6 +360,40 @@ export function GameplayExperience({
     });
   }
 
+  function handleSkipLevel() {
+    markInteraction();
+    const durationMs = currentTimestamp() - levelStartTimesRef.current[currentLevelId];
+    const attemptNo = attempts;
+
+    void sendStudyEvent({
+      participantId,
+      sessionId,
+      eventName: "level_skipped",
+      levelId: currentLevelId,
+      taskId: taskIds[currentLevelId],
+      attemptNo,
+      durationMs,
+    });
+
+    if (currentLevelId === "caesar-cipher") {
+      setCaesarShift(caesarLevel.targetShift);
+    } else if (currentLevelId === "xor-stream") {
+      setXorRuleSelection(xorLevel.rulePairs.map((p) => p.output));
+      setXorRuleSolved(true);
+      setXorRecoverySelection(xorExpectedRecovery.split(""));
+    } else if (currentLevelId === "block-cipher") {
+      setBlockSelection(blockCipherLevel.correctSequence);
+      setBlockFeedback([]);
+    }
+
+    setSkippedLevels((prev) => new Set(prev).add(currentLevelId));
+    setCompletedByLevel((prev) => ({ ...prev, [currentLevelId]: true }));
+    unlockCodex(currentLevelId);
+
+    setStatusTone("info");
+    setStatusMessage("Level skipped. The correct answer has been filled in. Review the Codex summary, then continue.");
+  }
+
   function chooseBit(
     index: number,
     value: string,
@@ -336,6 +410,7 @@ export function GameplayExperience({
   function continueAfterLevel(levelId: LevelId) {
     if (levelId === "block-cipher") {
       setReadyForPosttest(true);
+      setStatusTone("success");
       setStatusMessage(
         "All three levels are complete. Review any unlocked Codex entries, then continue to the post-test.",
       );
@@ -344,6 +419,7 @@ export function GameplayExperience({
 
     setCurrentLevelIndex((previous) => previous + 1);
     setStatusMessage(null);
+    setStatusTone("info");
     setToast(null);
     setBlockFeedback([]);
   }
@@ -410,6 +486,7 @@ export function GameplayExperience({
     logAttempt("caesar-cipher", attemptNo, isCorrect ? "correct-shift" : "wrong-shift");
 
     if (!isCorrect) {
+      setStatusTone("error");
       setStatusMessage("The preview is still off. Adjust the shift and try again.");
       showToast("Wrong shift. Move the slider until the message becomes readable.");
       handleFailedAttempt("caesar-cipher", attemptNo, "wrong-shift");
@@ -422,6 +499,7 @@ export function GameplayExperience({
       plaintext: caesarLevel.plaintext,
     });
     unlockCodex("caesar-cipher");
+    setStatusTone("success");
     setStatusMessage(
       `${caesarLevel.successMessage} The Codex entry for Caesar Cipher is now unlocked.`,
     );
@@ -434,6 +512,7 @@ export function GameplayExperience({
 
     if (xorRuleSelection.some((value) => value === "")) {
       logAttempt("xor-stream", attemptNo, "rule-incomplete");
+      setStatusTone("error");
       setStatusMessage("Finish each XOR output before checking the rule.");
       showToast("Finish every output bit before checking Step 1.");
       handleFailedAttempt("xor-stream", attemptNo, "rule-incomplete");
@@ -454,6 +533,7 @@ export function GameplayExperience({
         () => setXorRuleFeedback(Array.from({ length: xorLevel.rulePairs.length }, () => null)),
         1500,
       );
+      setStatusTone("error");
       setStatusMessage("Close. Same bits give 0, and different bits give 1.");
       showToast("Not quite. Same bits give 0 and different bits give 1.");
       handleFailedAttempt("xor-stream", attemptNo, "rule-wrong");
@@ -471,6 +551,7 @@ export function GameplayExperience({
       stage: "rule-board",
       outputs: xorRuleAnswer,
     });
+    setStatusTone("success");
     setStatusMessage(
       "Decoder calibrated. Scroll down to Phase 2 and recover the transmission.",
     );
@@ -482,6 +563,7 @@ export function GameplayExperience({
 
     if (xorRecoverySelection.some((value) => value === "")) {
       logAttempt("xor-stream", attemptNo, "recovery-incomplete");
+      setStatusTone("error");
       setStatusMessage("Choose every output bit before recovering the signal.");
       showToast("Choose every output bit before recovering the signal.");
       handleFailedAttempt("xor-stream", attemptNo, "recovery-incomplete");
@@ -506,6 +588,7 @@ export function GameplayExperience({
         () => setXorRecoveryFeedback(Array.from({ length: xorLevel.recoveryCipherBits.length }, () => null)),
         1500,
       );
+      setStatusTone("error");
       setStatusMessage("The signal is still scrambled. Work across the channels one bit at a time.");
       showToast("Wrong recovery. Compare each pair of bits one channel at a time.");
       handleFailedAttempt("xor-stream", attemptNo, "recovery-wrong");
@@ -523,6 +606,7 @@ export function GameplayExperience({
       recoveredBits: xorRecoveryPreview,
     });
     unlockCodex("xor-stream");
+    setStatusTone("success");
     setStatusMessage(
       `${xorLevel.successMessage} The Codex entry for XOR and stream ciphers is now unlocked.`,
     );
@@ -536,6 +620,7 @@ export function GameplayExperience({
 
     if (!evaluation.correct) {
       setBlockFeedback(evaluation.feedback);
+      setStatusTone("error");
       setStatusMessage("The setup is still off. Use the feedback to keep the key separate from the IV.");
       showToast("Wrong order. The key is the secret and the IV is only the starter value.");
       handleFailedAttempt("block-cipher", attemptNo, "wrong-sequence");
@@ -545,6 +630,7 @@ export function GameplayExperience({
     setBlockFeedback([]);
     handleSuccessfulAttempt("block-cipher", attemptNo, "correct-sequence");
     unlockCodex("block-cipher");
+    setStatusTone("success");
     setStatusMessage(blockCipherLevel.successMessage);
   }
 
@@ -560,36 +646,125 @@ export function GameplayExperience({
           </p>
         </div>
         <div className="rounded-[24px] border border-[var(--border)] bg-[var(--card-strong)] p-5">
-          <label className="block">
-            <span className="text-base font-semibold text-[var(--ink)]">Choose the shift</span>
-            <input
-              type="range"
-              min={0}
-              max={25}
-              value={caesarShift}
-              onChange={(event) => {
-                markInteraction();
-                const nextShift = Number(event.target.value);
-                setCaesarShift(nextShift);
-                setCaesarShiftChanges((previous) => previous + 1);
-                void sendStudyEvent({
-                  participantId,
-                  sessionId,
-                  eventName: "shift_changed",
-                  levelId: "caesar-cipher",
-                  taskId: taskIds["caesar-cipher"],
-                  result: `shift-${nextShift}`,
-                  metadata: {
-                    shift: nextShift,
-                  },
-                });
-              }}
-              className="mt-4 w-full"
-            />
-          </label>
-          <div className="mt-4 flex items-center justify-between rounded-2xl bg-[var(--card)] px-4 py-3">
-            <span className="text-sm text-[var(--ink-muted)]">Current shift</span>
-            <span className="font-mono text-lg text-[var(--ink)]">{caesarShift}</span>
+          <div className="flex flex-col">
+            <div className="mb-6 flex w-full items-center justify-between">
+              <span className="font-mono text-xs uppercase tracking-[0.2em] text-[var(--ink-muted)]">
+                Frequency Tuner
+              </span>
+              <div className="flex items-center gap-2 rounded-xl border border-[var(--border-strong)] bg-[var(--card)] px-3 py-1 shadow-[0_0_10px_rgba(78,155,255,0.15)]">
+                <span className="font-mono text-[0.65rem] uppercase tracking-widest text-[var(--accent-strong)]">
+                  Shift_Val
+                </span>
+                <span className="font-mono text-xl font-bold text-[var(--ink)]">
+                  {caesarShift.toString().padStart(2, "0")}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex w-full items-center gap-4 sm:gap-6">
+              <button
+                type="button"
+                onClick={() => {
+                  if (caesarShift > 0) {
+                    markInteraction();
+                    const nextShift = caesarShift - 1;
+                    setCaesarShift(nextShift);
+                    setCaesarShiftChanges((prev) => prev + 1);
+                    void sendStudyEvent({
+                      participantId,
+                      sessionId,
+                      eventName: "shift_changed",
+                      levelId: "caesar-cipher",
+                      taskId: taskIds["caesar-cipher"],
+                      result: `shift-${nextShift}`,
+                      metadata: { shift: nextShift },
+                    });
+                  }
+                }}
+                disabled={caesarShift === 0}
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-[var(--border-strong)] bg-[var(--card)] text-2xl font-bold text-[var(--ink)] transition-all hover:border-[var(--accent)] hover:bg-[#2d7ff9]/10 hover:text-[var(--accent-strong)] hover:shadow-[0_0_15px_rgba(78,155,255,0.3)] disabled:opacity-30 disabled:hover:border-[var(--border-strong)] disabled:hover:bg-[var(--card)] disabled:hover:text-[var(--ink)] disabled:hover:shadow-none"
+              >
+                -
+              </button>
+
+              <div className="relative flex-1 py-4">
+                <input
+                  type="range"
+                  min={0}
+                  max={25}
+                  value={caesarShift}
+                  onChange={(event) => {
+                    markInteraction();
+                    const nextShift = Number(event.target.value);
+                    setCaesarShift(nextShift);
+                    setCaesarShiftChanges((previous) => previous + 1);
+                    void sendStudyEvent({
+                      participantId,
+                      sessionId,
+                      eventName: "shift_changed",
+                      levelId: "caesar-cipher",
+                      taskId: taskIds["caesar-cipher"],
+                      result: `shift-${nextShift}`,
+                      metadata: {
+                        shift: nextShift,
+                      },
+                    });
+                  }}
+                  className="absolute inset-0 z-10 w-full cursor-pointer opacity-0"
+                />
+                
+                {/* Custom Track Background */}
+                <div className="pointer-events-none relative h-2 w-full rounded-full bg-[var(--card)] border border-[var(--border-strong)]">
+                  {/* Filled portion */}
+                  <div
+                    className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-[var(--accent)] to-[var(--accent-strong)] shadow-[0_0_8px_rgba(45,127,249,0.5)] transition-all duration-75"
+                    style={{ width: `${(caesarShift / 25) * 100}%` }}
+                  />
+                  {/* Custom Thumb */}
+                  <div
+                    className="absolute top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-[var(--card-strong)] bg-[var(--ink)] shadow-[0_0_12px_rgba(78,155,255,0.8)] transition-all duration-75"
+                    style={{ left: `${(caesarShift / 25) * 100}%` }}
+                  />
+                </div>
+                
+                {/* Tick marks */}
+                <div className="pointer-events-none mt-4 flex justify-between px-1">
+                  {[0, 5, 10, 15, 20, 25].map((tick) => (
+                    <div key={tick} className="flex flex-col items-center">
+                      <div className="h-1.5 w-[2px] bg-[var(--ink-muted)] opacity-40" />
+                      <span className="mt-1 font-mono text-[0.55rem] text-[var(--ink-muted)] opacity-60">
+                        {tick}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (caesarShift < 25) {
+                    markInteraction();
+                    const nextShift = caesarShift + 1;
+                    setCaesarShift(nextShift);
+                    setCaesarShiftChanges((prev) => prev + 1);
+                    void sendStudyEvent({
+                      participantId,
+                      sessionId,
+                      eventName: "shift_changed",
+                      levelId: "caesar-cipher",
+                      taskId: taskIds["caesar-cipher"],
+                      result: `shift-${nextShift}`,
+                      metadata: { shift: nextShift },
+                    });
+                  }
+                }}
+                disabled={caesarShift === 25}
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-[var(--border-strong)] bg-[var(--card)] text-2xl font-bold text-[var(--ink)] transition-all hover:border-[var(--accent)] hover:bg-[#2d7ff9]/10 hover:text-[var(--accent-strong)] hover:shadow-[0_0_15px_rgba(78,155,255,0.3)] disabled:opacity-30 disabled:hover:border-[var(--border-strong)] disabled:hover:bg-[var(--card)] disabled:hover:text-[var(--ink)] disabled:hover:shadow-none"
+              >
+                +
+              </button>
+            </div>
           </div>
           <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[var(--card-soft)] px-4 py-4">
             <p className="text-xs uppercase tracking-[0.25em] text-[var(--ink-muted)]">
@@ -600,7 +775,16 @@ export function GameplayExperience({
               </p>
           </div>
         </div>
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-3">
+          {attempts >= 3 && !completedByLevel[currentLevelId] && (
+            <Button
+              variant="secondary"
+              onClick={handleSkipLevel}
+              className="border-amber-500 text-amber-500 hover:bg-amber-500/10"
+            >
+              Show answer and continue
+            </Button>
+          )}
           <Button onClick={submitCaesarGuess}>Submit shift</Button>
         </div>
       </div>
@@ -727,12 +911,23 @@ export function GameplayExperience({
                 ))}
               </div>
             </div>
-            <Button
-              onClick={submitXorRuleBoard}
-              className="font-mono text-sm uppercase tracking-widest px-8"
-            >
-              Run Diagnostics
-            </Button>
+            <div className="flex justify-end gap-3 items-center w-full sm:w-auto">
+              {attempts >= 3 && !completedByLevel[currentLevelId] && !xorRuleSolved && (
+                <Button
+                  variant="secondary"
+                  onClick={handleSkipLevel}
+                  className="border-amber-500 text-amber-500 hover:bg-amber-500/10"
+                >
+                  Show answer and continue
+                </Button>
+              )}
+              <Button
+                onClick={submitXorRuleBoard}
+                className="font-mono text-sm uppercase tracking-widest px-8"
+              >
+                Run Diagnostics
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -883,7 +1078,16 @@ export function GameplayExperience({
                   ))}
                 </div>
               </div>
-              <div className="mt-4 flex justify-end">
+              <div className="mt-4 flex justify-end gap-3">
+                {attempts >= 3 && !completedByLevel[currentLevelId] && (
+                  <Button
+                    variant="secondary"
+                    onClick={handleSkipLevel}
+                    className="border-amber-500 text-amber-500 hover:bg-amber-500/10"
+                  >
+                    Show answer and continue
+                  </Button>
+                )}
                 <Button
                   onClick={submitXorRecovery}
                   className="font-mono text-sm uppercase tracking-widest px-8"
@@ -964,7 +1168,7 @@ export function GameplayExperience({
                       className={[
                         "flex h-full w-full flex-col items-center justify-center transition-colors",
                         isSelected 
-                          ? "bg-[var(--accent)]/20" 
+                          ? "bg-[#2d7ff9]/20" 
                           : "bg-[var(--card-strong)] hover:bg-[var(--card-soft)]"
                       ].join(" ")}
                       style={{ clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)" }}
@@ -1037,7 +1241,7 @@ export function GameplayExperience({
                         currentChoiceId 
                           ? "bg-[var(--accent-strong)] drop-shadow-[0_0_10px_rgba(56,189,248,0.4)]" 
                           : selectedBlockChoice 
-                            ? "bg-[var(--accent)]/50" 
+                            ? "bg-[#2d7ff9]/50" 
                             : "bg-[var(--border-strong)] opacity-50"
                       ].join(" ")}
                       style={{ clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)" }}
@@ -1066,7 +1270,7 @@ export function GameplayExperience({
                         className={[
                           "flex h-full w-full flex-col items-center justify-center transition-colors",
                           currentChoiceId 
-                            ? "bg-[var(--accent)]/20" 
+                            ? "bg-[#2d7ff9]/20" 
                             : "bg-[var(--card)]"
                         ].join(" ")}
                         style={{ clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)" }}
@@ -1108,7 +1312,16 @@ export function GameplayExperience({
           </div>
         ) : null}
         
-        <div className="flex justify-end pt-2">
+        <div className="flex justify-end gap-3 pt-2">
+          {attempts >= 3 && !completedByLevel[currentLevelId] && (
+            <Button
+              variant="secondary"
+              onClick={handleSkipLevel}
+              className="border-amber-500 text-amber-500 hover:bg-amber-500/10"
+            >
+              Show answer and continue
+            </Button>
+          )}
           <Button onClick={submitBlockSequence} className="font-mono uppercase tracking-widest text-sm px-8">
             Deploy Sequence
           </Button>
@@ -1136,38 +1349,100 @@ export function GameplayExperience({
         </div>
       ) : null}
 
+      {showIntro ? (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <Card className="mx-4 max-w-md p-6 text-center sm:p-8">
+            <p className="font-mono text-xs font-bold uppercase tracking-[0.3em] text-[var(--accent-strong)]">
+              Welcome, Agent
+            </p>
+            <h2 className="mt-3 text-2xl font-bold text-[var(--ink)]">
+              Mission Briefing
+            </h2>
+            <div className="mt-5 space-y-3 text-left text-sm leading-6 text-[var(--ink-muted)]">
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--accent)]/20 text-[0.6rem] font-bold text-[var(--accent-strong)]">
+                  L
+                </span>
+                <span>Your <strong className="text-[var(--ink)]">mission briefing</strong> is on the left.</span>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--accent)]/20 text-[0.6rem] font-bold text-[var(--accent-strong)]">
+                  C
+                </span>
+                <span>Solve each <strong className="text-[var(--ink)]">puzzle</strong> in the center.</span>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--accent)]/20 text-[0.6rem] font-bold text-[var(--accent-strong)]">
+                  R
+                </span>
+                <span><strong className="text-[var(--ink)]">Hints</strong> and <strong className="text-[var(--ink)]">intel</strong> unlock on the right as you work.</span>
+              </div>
+            </div>
+            <p className="mt-4 text-xs text-[var(--ink-muted)]">
+              You&apos;ll tackle 3 levels. Good luck.
+            </p>
+            <Button
+              onClick={() => setShowIntro(false)}
+              className="mt-6 w-full font-mono text-sm uppercase tracking-widest"
+            >
+              Begin Mission
+            </Button>
+          </Card>
+        </div>
+      ) : null}
+
       {/* ── Left Sidebar: Mission + Stats ── */}
       <div className="space-y-4 lg:h-[calc(100vh-10.5rem)] lg:overflow-auto lg:pr-1">
         <Card className="p-5">
           <div className="space-y-3">
-            <p className="font-mono text-xs uppercase tracking-[0.3em] text-[var(--accent-strong)]">
+            <p className="font-mono text-xs font-bold uppercase tracking-[0.3em] text-[var(--accent-strong)]">
               Mission
             </p>
-            <h2 className="text-xl font-semibold text-[var(--ink)] sm:text-2xl">
+            <h2 className="text-xl font-bold text-[var(--ink)] sm:text-2xl">
               {currentLevel.title}
             </h2>
-            <p className="text-sm leading-6 text-[var(--ink-muted)]">
+            <p className="text-sm font-medium leading-6 text-[var(--ink-muted)]">
               {currentLevel.mission}
             </p>
           </div>
         </Card>
         <Card className="p-4">
-          <div className="space-y-3 text-sm text-[var(--ink-muted)]">
+          <div className="space-y-3 text-sm">
             <div className="flex items-center justify-between">
-              <span>Level</span>
-              <strong className="font-mono text-[var(--ink)]">
+              <span className="font-semibold text-[var(--ink-muted)]">Level</span>
+              <strong className="font-mono text-lg text-[var(--ink)]">
                 {currentLevelIndex + 1} / {levelOrder.length}
               </strong>
             </div>
             <div className="flex items-center justify-between">
-              <span>Attempts</span>
-              <strong className="font-mono text-[var(--ink)]">{attempts}</strong>
+              <span className="font-semibold text-[var(--ink-muted)]">Attempts</span>
+              <strong className="font-mono text-lg text-[var(--ink)]">{attempts}</strong>
             </div>
           </div>
         </Card>
         {statusMessage ? (
-          <Card className="border-sky-500/30 bg-sky-500/12 p-4">
-            <p className="text-sm leading-6 text-sky-100">{statusMessage}</p>
+          <Card
+            className={[
+              "p-4",
+              statusTone === "success"
+                ? "border-emerald-500/30 bg-emerald-500/12"
+                : statusTone === "error"
+                  ? "border-red-400/30 bg-red-400/12"
+                  : "border-sky-500/30 bg-sky-500/12",
+            ].join(" ")}
+          >
+            <p
+              className={[
+                "text-sm font-semibold leading-6",
+                statusTone === "success"
+                  ? "text-emerald-100"
+                  : statusTone === "error"
+                    ? "text-red-100"
+                    : "text-sky-100",
+              ].join(" ")}
+            >
+              {statusMessage}
+            </p>
           </Card>
         ) : null}
       </div>
@@ -1186,7 +1461,7 @@ export function GameplayExperience({
           {completedByLevel[currentLevelId] ? (
             <div className="flex justify-end">
               {readyForPosttest ? (
-                <Button onClick={onComplete}>Continue to post-test</Button>
+                <Button onClick={() => onComplete(Array.from(skippedLevels))}>Continue to post-test</Button>
               ) : (
                 <Button onClick={() => continueAfterLevel(currentLevelId)}>
                   Continue to next level
@@ -1199,14 +1474,22 @@ export function GameplayExperience({
 
       {/* ── Right Sidebar: Hints + Codex ── */}
       <div className="space-y-4 lg:h-[calc(100vh-10.5rem)] lg:overflow-auto lg:pr-1">
-        <Card className="p-5 lg:p-6">
+        <Card className={`p-5 lg:p-6 ${hintCardGlow ? "hint-card-glow" : ""}`}>
           <div className="space-y-4">
             <div className="space-y-1">
-              <p className="font-mono text-sm font-semibold uppercase tracking-[0.28em] text-[var(--accent-strong)]">
-                Hints
-              </p>
-              <p className="text-base font-medium leading-7 text-[var(--ink)]">
-                Unlock after repeated failed attempts or 30 seconds of inactivity.
+              <div className="flex items-center gap-2">
+                <p className="font-mono text-sm font-semibold uppercase tracking-[0.28em] text-[var(--accent-strong)]">
+                  Hints
+                </p>
+                {unlockedHintCount > revealedHintCount ? (
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--accent)] opacity-75" />
+                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[var(--accent-strong)]" />
+                  </span>
+                ) : null}
+              </div>
+              <p className="text-sm font-medium leading-6 text-[var(--ink-muted)]">
+                Stuck? Hints unlock automatically as you work. Keep trying or wait 30 seconds.
               </p>
             </div>
             <Button
@@ -1216,9 +1499,9 @@ export function GameplayExperience({
               fullWidth
             >
               {unlockedHintCount === 0
-                ? "No hint yet"
+                ? "No hints yet"
                 : revealedHintCount < unlockedHintCount
-                  ? "Open next hint"
+                  ? `New hint available!`
                   : "All hints opened"}
             </Button>
             {revealedHints.length > 0 ? (
@@ -1234,8 +1517,8 @@ export function GameplayExperience({
                 ))}
               </div>
             ) : (
-              <div className="rounded-2xl border border-dashed border-[var(--border-strong)] bg-[var(--card-soft)] px-4 py-3 text-base font-medium leading-7 text-[var(--ink)]">
-                Keep testing the puzzle to unlock help.
+              <div className="rounded-2xl border border-dashed border-[var(--border-strong)] bg-[var(--card-soft)] px-4 py-3 text-sm font-medium leading-6 text-[var(--ink-muted)]">
+                Keep working on the puzzle — hints will appear here.
               </div>
             )}
           </div>

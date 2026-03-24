@@ -96,6 +96,7 @@ export function StudyExperience({ initialName }: StudyExperienceProps) {
     "block-key-iv": "",
   });
   const [surveyForm, setSurveyForm] = useState<SurveyFormState>(initialSurveyForm);
+  const [skippedLevels, setSkippedLevels] = useState<string[]>([]);
   const [participantId, setParticipantId] = useState<string>("");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -334,6 +335,7 @@ export function StudyExperience({ initialName }: StudyExperienceProps) {
           participantId,
           sessionId,
           completed: true,
+          skippedLevels: skippedLevels.length > 0 ? skippedLevels : undefined,
         }),
       });
 
@@ -544,7 +546,8 @@ export function StudyExperience({ initialName }: StudyExperienceProps) {
         <GameplayExperience
           participantId={participantId}
           sessionId={sessionId ?? ""}
-          onComplete={() => {
+          onComplete={(skipped) => {
+            setSkippedLevels(skipped);
             setCurrentStep("posttest");
             setFeedback(null);
           }}
@@ -668,12 +671,33 @@ export function StudyExperience({ initialName }: StudyExperienceProps) {
     );
   }
 
+  const progressSteps = [
+    { key: "consent", label: "Consent" },
+    { key: "pretest", label: "Pre-test" },
+    { key: "game", label: "Game" },
+    { key: "posttest", label: "Post-test" },
+    { key: "survey", label: "Survey" },
+    { key: "complete", label: "Done" },
+  ];
+
+  const stepToProgressIndex: Record<StudyStep, number> = {
+    landing: 0,
+    consent: 0,
+    pretest: 1,
+    "game-placeholder": 2,
+    posttest: 3,
+    survey: 4,
+    complete: 5,
+  };
+
   return (
     <SiteShell
       eyebrow="Research Pilot"
       title={studyCopy.title}
       description={studyCopy.subtitle}
       compact={currentStep === "game-placeholder"}
+      progressSteps={progressSteps}
+      progressCurrent={stepToProgressIndex[currentStep]}
     >
       <div className="space-y-4">
         {feedback ? (

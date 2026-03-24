@@ -166,6 +166,8 @@ export async function exportAnalysisCsv() {
       codexOpened: participantEvents.filter((event) => event.eventName === "codex_opened").length,
       attemptsFailed: participantEvents.filter((event) => event.eventName === "attempt_failed").length,
       attemptsSucceeded: participantEvents.filter((event) => event.eventName === "attempt_succeeded").length,
+      skippedLevelsCount: session?.skippedLevels?.length ?? 0,
+      skippedLevels: session?.skippedLevels?.join(", ") ?? "",
     };
   });
 

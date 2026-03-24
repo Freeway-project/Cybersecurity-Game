@@ -56,6 +56,7 @@ const sessionEndSchema = z.object({
   participantId: z.string().min(1),
   sessionId: z.string().min(1),
   completed: z.boolean(),
+  skippedLevels: z.array(z.string()).optional(),
 });
 
 export async function acceptConsent(rawInput: unknown, userAgent: string | null): Promise<ConsentResponse> {
@@ -267,6 +268,7 @@ export async function endSession(rawInput: unknown, userAgent: string | null) {
       $set: {
         completed: input.completed,
         endedAt: new Date(),
+        ...(input.skippedLevels ? { skippedLevels: input.skippedLevels } : {}),
       },
     },
   );

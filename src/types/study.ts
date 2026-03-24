@@ -30,6 +30,7 @@ export const studyEventNames = [
   "attempt_failed",
   "attempt_succeeded",
   "level_completed",
+  "level_skipped",
   "posttest_started",
   "posttest_submitted",
   "survey_started",
@@ -109,6 +110,7 @@ export interface SessionRecord {
   startedAt: Date;
   endedAt?: Date | null;
   completed: boolean;
+  skippedLevels?: string[];
 }
 
 export interface StudyEventRecord {
@@ -195,6 +197,7 @@ export interface SessionEndSubmission {
   participantId: string;
   sessionId: string;
   completed: boolean;
+  skippedLevels?: string[];
 }
 
 export interface ClientStudyEventInput {
