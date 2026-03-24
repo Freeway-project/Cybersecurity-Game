@@ -38,6 +38,28 @@ const assessmentItemIds: AssessmentItemId[] = [
   "block-key-iv",
 ];
 
+interface VerticalBarItem {
+  label: string;
+  value: number;
+  displayValue: string;
+  toneClass: string;
+}
+
+interface HorizontalBarItem {
+  label: string;
+  value: number;
+  displayValue: string;
+  toneClass: string;
+}
+
+interface DualMetricItem {
+  label: string;
+  primaryValue: number;
+  primaryDisplayValue: string;
+  secondaryValue: number;
+  secondaryDisplayValue: string;
+}
+
 function formatText(value: string | null | undefined, fallback = "Not recorded") {
   return value && value.trim().length > 0 ? value : fallback;
 }
@@ -68,6 +90,23 @@ function formatScore(value: number | null | undefined) {
 
 function formatPercent(value: number | null | undefined) {
   return typeof value === "number" ? `${value}%` : "Not recorded";
+}
+
+function average(values: number[], digits = 1) {
+  if (values.length === 0) {
+    return null;
+  }
+
+  const factor = 10 ** digits;
+  return Math.round((values.reduce((sum, value) => sum + value, 0) / values.length) * factor) / factor;
+}
+
+function percentage(numerator: number, denominator: number) {
+  if (denominator === 0) {
+    return 0;
+  }
+
+  return Math.round((numerator / denominator) * 1000) / 10;
 }
 
 function formatResearchValue(
@@ -132,6 +171,165 @@ function SummaryStat({
         {label}
       </p>
       <p className="mt-3 text-2xl font-semibold text-[var(--ink)]">{value}</p>
+    </div>
+  );
+}
+
+function ChartCard({
+  eyebrow,
+  title,
+  description,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Card className="p-5">
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-[var(--accent-strong)]">
+            {eyebrow}
+          </p>
+          <h3 className="text-lg font-semibold text-[var(--ink)]">{title}</h3>
+          <p className="text-sm leading-6 text-[var(--ink-muted)]">{description}</p>
+        </div>
+        {children}
+      </div>
+    </Card>
+  );
+}
+
+function EmptyChartState() {
+  return (
+    <div className="rounded-2xl border border-dashed border-[var(--border-strong)] bg-[var(--card)]/35 px-4 py-8 text-center text-sm text-[var(--ink-muted)]">
+      No chart data available yet.
+    </div>
+  );
+}
+
+function VerticalBarChart({
+  items,
+  maxValue,
+}: {
+  items: VerticalBarItem[];
+  maxValue: number;
+}) {
+  if (items.length === 0 || maxValue <= 0) {
+    return <EmptyChartState />;
+  }
+
+  return (
+    <div className="grid grid-cols-3 gap-4">
+      {items.map((item) => {
+        const heightPct = Math.max((item.value / maxValue) * 100, item.value > 0 ? 10 : 0);
+
+        return (
+          <div key={item.label} className="flex flex-col items-center gap-3">
+            <p className="text-sm font-semibold text-[var(--ink)]">{item.displayValue}</p>
+            <div className="flex h-44 w-full items-end rounded-[22px] border border-[var(--border)] bg-[var(--card)]/50 p-3">
+              <div
+                className={[
+                  "w-full rounded-[16px] border border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.24)]",
+                  item.toneClass,
+                ].join(" ")}
+                style={{ height: `${heightPct}%` }}
+              />
+            </div>
+            <p className="text-center text-xs uppercase tracking-[0.18em] text-[var(--ink-muted)]">
+              {item.label}
+            </p>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function HorizontalBarChart({
+  items,
+  maxValue,
+}: {
+  items: HorizontalBarItem[];
+  maxValue: number;
+}) {
+  if (items.length === 0 || maxValue <= 0) {
+    return <EmptyChartState />;
+  }
+
+  return (
+    <div className="space-y-4">
+      {items.map((item) => (
+        <div key={item.label} className="space-y-2">
+          <div className="flex items-center justify-between gap-4 text-sm">
+            <span className="font-medium text-[var(--ink)]">{item.label}</span>
+            <span className="font-mono text-[var(--ink-muted)]">{item.displayValue}</span>
+          </div>
+          <div className="h-3 overflow-hidden rounded-full border border-[var(--border)] bg-[var(--card)]/65">
+            <div
+              className={["h-full rounded-full", item.toneClass].join(" ")}
+              style={{ width: `${Math.max((item.value / maxValue) * 100, item.value > 0 ? 4 : 0)}%` }}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DualMetricChart({
+  items,
+  maxValue,
+  primaryLabel,
+  secondaryLabel,
+}: {
+  items: DualMetricItem[];
+  maxValue: number;
+  primaryLabel: string;
+  secondaryLabel: string;
+}) {
+  if (items.length === 0 || maxValue <= 0) {
+    return <EmptyChartState />;
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-4 text-xs uppercase tracking-[0.18em] text-[var(--ink-muted)]">
+        <span className="inline-flex items-center gap-2">
+          <span className="h-2.5 w-2.5 rounded-full bg-sky-400" />
+          {primaryLabel}
+        </span>
+        <span className="inline-flex items-center gap-2">
+          <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+          {secondaryLabel}
+        </span>
+      </div>
+      {items.map((item) => (
+        <div key={item.label} className="space-y-2 rounded-2xl border border-[var(--border)] bg-[var(--card)]/45 p-4">
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-sm font-medium text-[var(--ink)]">{item.label}</p>
+            <p className="font-mono text-xs text-[var(--ink-muted)]">
+              {item.primaryDisplayValue} / {item.secondaryDisplayValue}
+            </p>
+          </div>
+          <div className="space-y-2">
+            <div className="h-2.5 overflow-hidden rounded-full border border-[var(--border)] bg-[var(--card)]/65">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-sky-500 to-sky-300"
+                style={{ width: `${Math.max((item.primaryValue / maxValue) * 100, item.primaryValue > 0 ? 4 : 0)}%` }}
+              />
+            </div>
+            <div className="h-2.5 overflow-hidden rounded-full border border-[var(--border)] bg-[var(--card)]/65">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-300"
+                style={{ width: `${Math.max((item.secondaryValue / maxValue) * 100, item.secondaryValue > 0 ? 4 : 0)}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -379,6 +577,105 @@ export function AdminConsole({
   rawExportHref,
   overview,
 }: AdminConsoleProps) {
+  const rows = overview.rows;
+  const scoreShiftItems: VerticalBarItem[] = [
+    {
+      label: "Pre-test",
+      value: overview.summary.averagePreScore ?? 0,
+      displayValue: formatScore(overview.summary.averagePreScore),
+      toneClass: "bg-gradient-to-t from-sky-600 to-sky-300",
+    },
+    {
+      label: "Post-test",
+      value: overview.summary.averagePostScore ?? 0,
+      displayValue: formatScore(overview.summary.averagePostScore),
+      toneClass: "bg-gradient-to-t from-emerald-600 to-emerald-300",
+    },
+    {
+      label: "Score gain",
+      value: Math.max(overview.summary.averageScoreGain ?? 0, 0),
+      displayValue: formatNumber(overview.summary.averageScoreGain),
+      toneClass: "bg-gradient-to-t from-amber-500 to-yellow-300",
+    },
+  ];
+  const levelCompletionItems: HorizontalBarItem[] = reportLevelIds.map((levelId) => ({
+    label: levelLabels[levelId],
+    value: percentage(
+      rows.filter((row) => row.levels[levelId].completed).length,
+      rows.length,
+    ),
+    displayValue: formatPercent(
+      percentage(rows.filter((row) => row.levels[levelId].completed).length, rows.length),
+    ),
+    toneClass: "bg-gradient-to-r from-emerald-500 to-emerald-300",
+  }));
+  const levelDurationItems: VerticalBarItem[] = reportLevelIds.map((levelId) => {
+    const averageDuration = average(
+      rows.flatMap((row) =>
+        row.levels[levelId].durationMs === null ? [] : [row.levels[levelId].durationMs],
+      ),
+      0,
+    );
+
+    return {
+      label: levelLabels[levelId],
+      value: averageDuration ?? 0,
+      displayValue: formatDurationMs(averageDuration),
+      toneClass: "bg-gradient-to-t from-fuchsia-600 to-pink-300",
+    };
+  });
+  const surveyItems: HorizontalBarItem[] = [
+    {
+      label: "Helpfulness",
+      value: average(rows.flatMap((row) => (row.helpfulScore === null ? [] : [row.helpfulScore]))) ?? 0,
+      displayValue: formatLikert(
+        average(rows.flatMap((row) => (row.helpfulScore === null ? [] : [row.helpfulScore]))),
+      ),
+      toneClass: "bg-gradient-to-r from-cyan-500 to-sky-300",
+    },
+    {
+      label: "Hints usefulness",
+      value: average(rows.flatMap((row) => (row.hintsScore === null ? [] : [row.hintsScore]))) ?? 0,
+      displayValue: formatLikert(
+        average(rows.flatMap((row) => (row.hintsScore === null ? [] : [row.hintsScore]))),
+      ),
+      toneClass: "bg-gradient-to-r from-blue-500 to-cyan-300",
+    },
+    {
+      label: "Engagement",
+      value: average(rows.flatMap((row) => (row.engagementScore === null ? [] : [row.engagementScore]))) ?? 0,
+      displayValue: formatLikert(
+        average(rows.flatMap((row) => (row.engagementScore === null ? [] : [row.engagementScore]))),
+      ),
+      toneClass: "bg-gradient-to-r from-violet-500 to-fuchsia-300",
+    },
+    {
+      label: "Reuse intention",
+      value: average(rows.flatMap((row) => (row.reuseScore === null ? [] : [row.reuseScore]))) ?? 0,
+      displayValue: formatLikert(
+        average(rows.flatMap((row) => (row.reuseScore === null ? [] : [row.reuseScore]))),
+      ),
+      toneClass: "bg-gradient-to-r from-amber-500 to-yellow-300",
+    },
+  ];
+  const levelEffortItems: DualMetricItem[] = reportLevelIds.map((levelId) => {
+    const averageAttempts = average(rows.map((row) => row.levels[levelId].attemptsTotal));
+    const averageHints = average(rows.map((row) => row.levels[levelId].hintsOpened));
+
+    return {
+      label: levelLabels[levelId],
+      primaryValue: averageAttempts ?? 0,
+      primaryDisplayValue: formatNumber(averageAttempts),
+      secondaryValue: averageHints ?? 0,
+      secondaryDisplayValue: formatNumber(averageHints),
+    };
+  });
+  const durationChartMax = Math.max(...levelDurationItems.map((item) => item.value), 0);
+  const effortChartMax = Math.max(
+    ...levelEffortItems.flatMap((item) => [item.primaryValue, item.secondaryValue]),
+    0,
+  );
+
   return (
     <div className="space-y-6">
       <Card className="p-6">
@@ -449,6 +746,70 @@ export function AdminConsole({
           label="Average levels completed"
           value={formatNumber(overview.summary.averageLevelsCompletedCount)}
         />
+      </div>
+
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <p className="font-mono text-xs uppercase tracking-[0.3em] text-[var(--accent-strong)]">
+            Research visuals
+          </p>
+          <h2 className="text-2xl font-semibold text-[var(--ink)]">
+            Graph views for quick interpretation
+          </h2>
+          <p className="text-sm leading-7 text-[var(--ink-muted)]">
+            These charts summarize the same participant-level report rows shown below and
+            help with faster research review.
+          </p>
+        </div>
+
+        <div className="grid gap-4 xl:grid-cols-2">
+          <ChartCard
+            eyebrow="Learning"
+            title="Assessment shift"
+            description="Average pre-test, post-test, and gain across recorded participants."
+          >
+            <VerticalBarChart items={scoreShiftItems} maxValue={3} />
+          </ChartCard>
+
+          <ChartCard
+            eyebrow="Completion"
+            title="Level completion rates"
+            description="Share of participants with a recorded completion event for each level."
+          >
+            <HorizontalBarChart items={levelCompletionItems} maxValue={100} />
+          </ChartCard>
+
+          <ChartCard
+            eyebrow="Time"
+            title="Average level duration"
+            description="Mean recorded completion duration per level from `level_completed` telemetry."
+          >
+            <VerticalBarChart items={levelDurationItems} maxValue={durationChartMax} />
+          </ChartCard>
+
+          <ChartCard
+            eyebrow="Survey"
+            title="Average perception scores"
+            description="Mean Likert responses on a five-point scale for the post-study survey."
+          >
+            <HorizontalBarChart items={surveyItems} maxValue={5} />
+          </ChartCard>
+
+          <div className="xl:col-span-2">
+            <ChartCard
+              eyebrow="Effort"
+              title="Average attempts and hint usage by level"
+              description="Comparison of average attempt count against average hint openings for each cryptography level."
+            >
+              <DualMetricChart
+                items={levelEffortItems}
+                maxValue={effortChartMax}
+                primaryLabel="Attempts"
+                secondaryLabel="Hints opened"
+              />
+            </ChartCard>
+          </div>
+        </div>
       </div>
 
       <div className="space-y-4">

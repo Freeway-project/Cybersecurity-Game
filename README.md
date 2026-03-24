@@ -1,6 +1,6 @@
 # Cybersecurity Game Pilot
 
-A modular Next.js pilot build for a cryptography education study. The current build includes the full participant flow, three gameplay levels, Mongo-backed logging, and admin export tools.
+A modular Next.js pilot build for a cryptography education study. The current build includes the full participant flow, three gameplay levels, Mongo-backed logging, and an open research dashboard with export tools.
 
 ## Current Scope
 
@@ -11,7 +11,7 @@ A modular Next.js pilot build for a cryptography education study. The current bu
 - 3-item post-test
 - optional perception survey
 - Mongo-backed event and session storage
-- admin invite generation and raw or analysis exports
+- open research dashboard with raw or analysis exports
 
 ## Stack
 
@@ -27,7 +27,6 @@ Copy `.env.example` to `.env.local` and set:
 
 - `MONGODB_URI`
 - `MONGODB_DB_NAME`
-- `ADMIN_SECRET`
 - `APP_BASE_URL`
 - `NEXT_PUBLIC_ENABLE_DEV_BYPASS`
 
@@ -72,7 +71,7 @@ npm run dev
 
 Participant flow starts at `http://localhost:3000/start`.
 
-Admin flow starts at `http://localhost:3000/admin`.
+Research dashboard starts at `http://localhost:3000/admin`.
 
 For local testing without invite emails, you can set `NEXT_PUBLIC_ENABLE_DEV_BYPASS=true` in `.env.local`.
 
@@ -82,7 +81,6 @@ Set these environment variables in Vercel:
 
 - `MONGODB_URI`
 - `MONGODB_DB_NAME`
-- `ADMIN_SECRET`
 - `APP_BASE_URL`
 - `NEXT_PUBLIC_ENABLE_DEV_BYPASS=false`
 
@@ -95,8 +93,6 @@ Notes:
 
 - Do not use the local Docker MongoDB URI in Vercel unless the database is actually reachable from Vercel.
 - For production, use a hosted MongoDB instance such as MongoDB Atlas.
-- `ADMIN_SECRET` should be a strong random secret and should not match your local value.
-
 ## Study Flow
 
 1. Resolve invite token from `/start?token=...`
@@ -105,14 +101,14 @@ Notes:
 4. Run the 3 gameplay levels
 5. Run the 3-item post-test
 6. Collect the short survey
-7. Mark the session complete and expose data through admin export
+7. Mark the session complete and expose data through the research dashboard and exports
 
 ## Modular Structure
 
 - `src/modules/invites` token lookup and invite creation
 - `src/modules/study` study flow state and persistence
 - `src/modules/instrumentation` event logging and indexes
-- `src/modules/admin` admin auth, summary counts, exports
+- `src/modules/admin` research dashboard, summary counts, exports
 - `src/modules/game` Caesar, XOR, and block-cipher gameplay
 - `src/lib` Mongo and utility helpers
 - `src/config` study content and runtime config

@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 
-import { exportAnalysisCsv, requireAdmin } from "@/modules/admin/server";
+import { exportAnalysisCsv } from "@/modules/admin/server";
 
 export async function GET() {
   try {
-    await requireAdmin();
     const csv = await exportAnalysisCsv();
 
     return new NextResponse(csv, {

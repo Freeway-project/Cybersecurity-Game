@@ -1,10 +1,5 @@
-import { createHash } from "crypto";
-
-import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
-import { cookies } from "next/headers";
 import { z } from "zod";
 
-import { getServerEnv } from "@/config/env";
 import { toCsv } from "@/lib/csv";
 import { getMongoDb } from "@/lib/mongodb";
 import { ensureStudyIndexes } from "@/modules/instrumentation/server";
@@ -17,8 +12,6 @@ import type {
   StudyEventRecord,
   SurveyRecord,
 } from "@/types/study";
-
-export const ADMIN_COOKIE_NAME = "pilot_admin_session";
 
 const collectionSchema = z.enum([
   "participants",
@@ -589,43 +582,6 @@ async function loadAdminDataset() {
     events,
     rows,
   };
-}
-
-export function adminCookieValue(secret: string) {
-  return createHash("sha256").update(secret).digest("hex");
-}
-
-export function validateAdminSecret(secret: string) {
-  const env = getServerEnv();
-
-  if (!env.ADMIN_SECRET) {
-    throw new Error("ADMIN_SECRET is not configured.");
-  }
-
-  return secret === env.ADMIN_SECRET;
-}
-
-export async function isAdminAuthenticated(
-  cookieStore?: ReadonlyRequestCookies,
-) {
-  const env = getServerEnv();
-
-  if (!env.ADMIN_SECRET) {
-    return false;
-  }
-
-  const store = cookieStore ?? (await cookies());
-  const value = store.get(ADMIN_COOKIE_NAME)?.value;
-
-  return value === adminCookieValue(env.ADMIN_SECRET);
-}
-
-export async function requireAdmin(cookieStore?: ReadonlyRequestCookies) {
-  const isAuthenticated = await isAdminAuthenticated(cookieStore);
-
-  if (!isAuthenticated) {
-    throw new Error("Admin access denied.");
-  }
 }
 
 export async function getAdminOverview(): Promise<AdminOverview> {
