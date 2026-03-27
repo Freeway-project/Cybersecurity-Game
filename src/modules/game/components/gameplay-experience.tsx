@@ -1,10 +1,11 @@
 "use client";
 
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/ibm-plex-mono/500.css";
+
 import { type Dispatch, type SetStateAction, useEffect, useMemo, useRef, useState } from "react";
-import confetti from "canvas-confetti";
 
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import {
   blockCipherLevel,
   caesarLevel,
@@ -27,15 +28,82 @@ interface GameplayExperienceProps {
   onComplete: (skippedLevels: string[]) => void;
 }
 
-interface ToastState {
-  message: string;
-  tone: "info" | "error";
-}
+type StatusTone = "info" | "error" | "success";
+type WaveformState = "active" | "error" | "success";
 
 const taskIds: Record<LevelId, string> = {
   "caesar-cipher": "shift-control",
   "xor-stream": "signal-repair",
   "block-cipher": "role-sequence",
+};
+
+const bootSequenceLines = [
+  "SIGINT STATION // BOOT SEQUENCE INITIATED",
+  "",
+  "> LOADING SIGNAL ANALYSIS SUITE.............. OK",
+  "> CONNECTING TO INTERCEPT ARRAY.............. OK",
+  "> AUTHENTICATING ANALYST: CIPHER............. OK",
+  "> TRANSMISSION QUEUE: 3 INTERCEPTS PENDING",
+  "",
+  "// BRIEFING:",
+  "// An unknown network has been transmitting on monitored frequencies.",
+  "// Three transmissions have been intercepted but remain encoded.",
+  "// Your task: decode each transmission and log its contents.",
+  "// Method: unknown. Work from what you have.",
+];
+
+const transitionBeats: Record<
+  Exclude<LevelId, "block-cipher">,
+  {
+    lines: string[];
+    action: string;
+  }
+> = {
+  "caesar-cipher": {
+    lines: [
+      "// ALPHA CHANNEL SECURED",
+      "// NEW INTERCEPT DETECTED -- BRAVO CHANNEL",
+      "// SIGNAL TYPE: UNKNOWN BITWISE ENCODING",
+      "// ANALYSIS REQUIRED",
+    ],
+    action: "// [PRESS ENTER TO OPEN BRAVO CHANNEL]",
+  },
+  "xor-stream": {
+    lines: [
+      "// BRAVO CHANNEL CLEARED",
+      "// FINAL TRANSMISSION INCOMING -- CHARLIE CHANNEL",
+      "// ADVERSARY HAS UPGRADED ENCRYPTION",
+      "// SECURE RESPONSE PROTOCOL REQUIRED",
+    ],
+    action: "// [PRESS ENTER TO OPEN CHARLIE CHANNEL]",
+  },
+};
+
+const alphaIntercepts = [
+  {
+    id: "alpha-primary",
+    label: "ALPHA CHANNEL",
+    receivedAt: "03:42:17 UTC",
+    ciphertext: caesarLevel.ciphertext,
+  },
+  {
+    id: "alpha-aux-1",
+    label: "AUXILIARY INTERCEPT 1",
+    receivedAt: "03:42:54 UTC",
+    ciphertext: "UHQGHCYRXV FRQILUPHG",
+  },
+  {
+    id: "alpha-aux-2",
+    label: "AUXILIARY INTERCEPT 2",
+    receivedAt: "03:43:26 UTC",
+    ciphertext: "FRQWDFW ZDLWLQJ HDVW",
+  },
+] as const;
+
+const levelReadyStatuses: Record<LevelId, string> = {
+  "caesar-cipher": "// ALPHA CHANNEL OPEN -- SWEEP FOR A LEGIBLE TRANSMISSION",
+  "xor-stream": "// BRAVO CHANNEL OPEN -- CALIBRATE THE DECODE RULE",
+  "block-cipher": "// CHARLIE CHANNEL OPEN -- CONFIGURE A SECURE RESPONSE",
 };
 
 function currentTimestamp() {
@@ -60,6 +128,188 @@ function buildLevelBooleanState(defaultValue: boolean) {
 
 function buildBitSelectionState(length: number) {
   return Array.from({ length }, () => "");
+}
+
+function formatBlockSequence(selection: string[]) {
+  return selection
+    .map((choice) => choice || "empty")
+    .join(" > ");
+}
+
+function StatusWaveform({ state }: { state: WaveformState }) {
+  const path =
+    state === "success"
+      ? "M4 20 L14 20 L22 10 L30 30 L38 12 L46 26 L56 20"
+      : state === "error"
+        ? "M4 20 L56 20"
+        : "M4 20 L12 16 L18 24 L26 12 L34 28 L42 16 L50 22 L56 20";
+
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 60 40"
+      className="h-10 w-24 shrink-0"
+      fill="none"
+    >
+      <path
+        d={path}
+        className={[
+          "waveform-path",
+          state === "success"
+            ? "waveform-path--success"
+            : state === "error"
+              ? "waveform-path--error"
+              : "waveform-path--active",
+        ].join(" ")}
+      />
+    </svg>
+  );
+}
+
+interface FrequencyDialProps {
+  value: number;
+  onChange: (nextValue: number) => void;
+}
+
+function FrequencyDial({ value, onChange }: FrequencyDialProps) {
+  const dialRef = useRef<SVGSVGElement | null>(null);
+  const draggingRef = useRef(false);
+  const center = 90;
+  const radius = 60;
+  const indicatorAngle = (value / 25) * 300 - 150;
+
+  function polarToCartesian(angle: number, innerRadius: number, outerRadius: number) {
+    const radians = ((angle - 90) * Math.PI) / 180;
+
+    return {
+      x1: center + innerRadius * Math.cos(radians),
+      y1: center + innerRadius * Math.sin(radians),
+      x2: center + outerRadius * Math.cos(radians),
+      y2: center + outerRadius * Math.sin(radians),
+    };
+  }
+
+  function updateFromPointer(clientX: number, clientY: number) {
+    if (!dialRef.current) {
+      return;
+    }
+
+    const bounds = dialRef.current.getBoundingClientRect();
+    const x = clientX - bounds.left;
+    const y = clientY - bounds.top;
+    const rawAngle = (Math.atan2(y - center, x - center) * 180) / Math.PI + 90;
+    const normalized = ((rawAngle + 540) % 360) - 180;
+    const clamped = Math.min(150, Math.max(-150, normalized));
+    const nextValue = Math.round(((clamped + 150) / 300) * 25);
+
+    onChange(nextValue);
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-4">
+      <svg
+        ref={dialRef}
+        viewBox="0 0 180 180"
+        className="h-[180px] w-[180px] touch-none"
+        onPointerDown={(event) => {
+          draggingRef.current = true;
+          event.currentTarget.setPointerCapture(event.pointerId);
+          updateFromPointer(event.clientX, event.clientY);
+        }}
+        onPointerMove={(event) => {
+          if (!draggingRef.current) {
+            return;
+          }
+
+          updateFromPointer(event.clientX, event.clientY);
+        }}
+        onPointerUp={(event) => {
+          draggingRef.current = false;
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        }}
+        onPointerCancel={() => {
+          draggingRef.current = false;
+        }}
+        role="slider"
+        aria-label="Transmission frequency dial"
+        aria-valuemin={0}
+        aria-valuemax={25}
+        aria-valuenow={value}
+      >
+        <circle cx={center} cy={center} r={radius} fill="transparent" stroke="#1a2840" strokeWidth="4" />
+        {Array.from({ length: 26 }, (_, index) => {
+          const tickAngle = (index / 25) * 300 - 150;
+          const tick = polarToCartesian(tickAngle, 54, 68);
+
+          return (
+            <line
+              key={`tick-${index}`}
+              x1={tick.x1}
+              y1={tick.y1}
+              x2={tick.x2}
+              y2={tick.y2}
+              stroke="#2a3a4a"
+              strokeWidth={1.5}
+              strokeLinecap="round"
+            />
+          );
+        })}
+        {(() => {
+          const indicator = polarToCartesian(indicatorAngle, 12, 48);
+
+          return (
+            <line
+              x1={indicator.x1}
+              y1={indicator.y1}
+              x2={indicator.x2}
+              y2={indicator.y2}
+              stroke="#d4a843"
+              strokeWidth={4}
+              strokeLinecap="round"
+            />
+          );
+        })()}
+        <circle cx={center} cy={center} r="18" fill="#10192a" stroke="#1a2840" strokeWidth="2" />
+        <text
+          x={center}
+          y={84}
+          textAnchor="middle"
+          className="fill-[#5a6a7a] text-[8px]"
+          style={{ fontFamily: "IBM Plex Mono, Courier New, monospace" }}
+        >
+          FREQ
+        </text>
+        <text
+          x={center}
+          y={102}
+          textAnchor="middle"
+          className="fill-[#d4a843] text-[14px] font-medium"
+          style={{ fontFamily: "IBM Plex Mono, Courier New, monospace" }}
+        >
+          {value.toString().padStart(2, "0")}
+        </text>
+      </svg>
+
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => onChange(Math.max(0, value - 1))}
+          disabled={value === 0}
+          className="rounded border border-[#1a2840] bg-[#10192a] px-4 py-2 font-mono text-sm uppercase tracking-[0.18em] text-[#d4a843] transition hover:border-[#d4a843] hover:text-[#f2c96a] disabled:opacity-40"
+        >
+          -
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange(Math.min(25, value + 1))}
+          disabled={value === 25}
+          className="rounded border border-[#1a2840] bg-[#10192a] px-4 py-2 font-mono text-sm uppercase tracking-[0.18em] text-[#d4a843] transition hover:border-[#d4a843] hover:text-[#f2c96a] disabled:opacity-40"
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export function GameplayExperience({
@@ -89,12 +339,11 @@ export function GameplayExperience({
   const [skippedLevels, setSkippedLevels] = useState<Set<LevelId>>(new Set());
   const [unlockedCodexEntries, setUnlockedCodexEntries] = useState<CodexEntryId[]>([]);
   const [codexOpen, setCodexOpen] = useState(false);
-  const [activeCodexEntry, setActiveCodexEntry] =
-    useState<CodexEntryId>("caesar-cipher");
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [statusTone, setStatusTone] = useState<"success" | "error" | "info">("info");
-  const [toast, setToast] = useState<ToastState | null>(null);
+  const [activeCodexEntry, setActiveCodexEntry] = useState<CodexEntryId>("caesar-cipher");
+  const [statusLine, setStatusLine] = useState("// STATION ONLINE -- AWAITING FIRST INTERCEPT");
+  const [statusTone, setStatusTone] = useState<StatusTone>("info");
   const [blockFeedback, setBlockFeedback] = useState<string[]>([]);
+  const [blockAttemptHistory, setBlockAttemptHistory] = useState<string[]>([]);
   const [xorRuleFeedback, setXorRuleFeedback] = useState<(string | null)[]>(
     Array.from({ length: xorLevel.rulePairs.length }, () => null),
   );
@@ -102,7 +351,7 @@ export function GameplayExperience({
     Array.from({ length: xorLevel.recoveryCipherBits.length }, () => null),
   );
   const [feedbackGeneration, setFeedbackGeneration] = useState(0);
-  const [readyForPosttest, setReadyForPosttest] = useState(false);
+  const [signalBurstKey, setSignalBurstKey] = useState(0);
   const levelStartTimesRef = useRef<Record<LevelId, number>>({
     "caesar-cipher": 0,
     "xor-stream": 0,
@@ -111,19 +360,28 @@ export function GameplayExperience({
   const lastInteractionRef = useRef(0);
   const startedLevelsRef = useRef<Set<LevelId>>(new Set());
   const xorStepTwoRef = useRef<HTMLDivElement | null>(null);
-  const prevUnlockedHintsRef = useRef(0);
-  const [hintCardGlow, setHintCardGlow] = useState(false);
 
   const currentLevel = gameplayLevels[currentLevelIndex];
   const currentLevelId = currentLevel.id;
   const attempts = attemptsByLevel[currentLevelId];
   const unlockedHintCount = unlockedHintsByLevel[currentLevelId];
   const revealedHintCount = revealedHintsByLevel[currentLevelId];
+  const revealedHints = currentLevel.hints.slice(0, revealedHintCount);
+  const waveformState: WaveformState = completedByLevel[currentLevelId]
+    ? "success"
+    : statusTone === "error"
+      ? "error"
+      : "active";
 
-  const caesarPreview = useMemo(
-    () => decryptCaesar(caesarLevel.ciphertext, caesarShift),
+  const alphaTrafficPreview = useMemo(
+    () =>
+      alphaIntercepts.map((intercept) => ({
+        ...intercept,
+        preview: decryptCaesar(intercept.ciphertext, caesarShift),
+      })),
     [caesarShift],
   );
+
   const xorRuleAnswer = xorRuleSelection.join("");
   const xorRecoveryPreview = xorRecoverySelection.join("");
   const xorExpectedRecovery =
@@ -187,27 +445,37 @@ export function GameplayExperience({
   }, [currentLevelId, xorRuleSolved]);
 
   useEffect(() => {
-    if (!toast) {
+    if (showIntro || !completedByLevel[currentLevelId]) {
       return;
     }
 
-    const timeoutId = window.setTimeout(() => {
-      setToast(null);
-    }, 2600);
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (event.key !== "Enter") {
+        return;
+      }
 
-    return () => window.clearTimeout(timeoutId);
-  }, [toast]);
+      event.preventDefault();
 
-  useEffect(() => {
-    if (unlockedHintCount > prevUnlockedHintsRef.current) {
-      showToast("A new hint is available in the sidebar.", "info");
-      setHintCardGlow(true);
-      const timeoutId = window.setTimeout(() => setHintCardGlow(false), 1600);
-      prevUnlockedHintsRef.current = unlockedHintCount;
-      return () => window.clearTimeout(timeoutId);
-    }
-    prevUnlockedHintsRef.current = unlockedHintCount;
-  }, [unlockedHintCount]);
+      if (currentLevelId === "block-cipher") {
+        onComplete(Array.from(skippedLevels));
+        return;
+      }
+
+      setCurrentLevelIndex((previous) => previous + 1);
+      setStatusTone("info");
+      setStatusLine(levelReadyStatuses[levelOrder[currentLevelIndex + 1]]);
+    };
+
+    window.addEventListener("keydown", handleKeydown);
+    return () => window.removeEventListener("keydown", handleKeydown);
+  }, [
+    currentLevelId,
+    currentLevelIndex,
+    completedByLevel,
+    onComplete,
+    showIntro,
+    skippedLevels,
+  ]);
 
   function markInteraction() {
     lastInteractionRef.current = currentTimestamp();
@@ -232,10 +500,6 @@ export function GameplayExperience({
               ? Math.max(previous[levelId], 1)
               : previous[levelId],
     }));
-  }
-
-  function showToast(message: string, tone: ToastState["tone"] = "error") {
-    setToast({ message, tone });
   }
 
   function getNextAttempt(levelId: LevelId) {
@@ -295,35 +559,13 @@ export function GameplayExperience({
     });
   }
 
-  function fireConfetti() {
-    const end = Date.now() + 1500;
-    const colors = ["#2d7ff9", "#4e9bff", "#34d399", "#fbbf24", "#f472b6"];
-    (function burst() {
-      confetti({
-        particleCount: 3,
-        angle: 60,
-        spread: 55,
-        origin: { x: 0, y: 0.7 },
-        colors,
-      });
-      confetti({
-        particleCount: 3,
-        angle: 120,
-        spread: 55,
-        origin: { x: 1, y: 0.7 },
-        colors,
-      });
-      if (Date.now() < end) requestAnimationFrame(burst);
-    })();
-  }
-
   function handleSuccessfulAttempt(
     levelId: LevelId,
     attemptNo: number,
     result: string,
     metadata?: Record<string, unknown>,
   ) {
-    fireConfetti();
+    setSignalBurstKey((previous) => previous + 1);
     setAttemptsByLevel((previous) => ({
       ...previous,
       [levelId]: attemptNo,
@@ -360,6 +602,28 @@ export function GameplayExperience({
     });
   }
 
+  function updateCaesarShift(nextShift: number) {
+    if (nextShift === caesarShift) {
+      return;
+    }
+
+    markInteraction();
+    setCaesarShift(nextShift);
+    setCaesarShiftChanges((previous) => previous + 1);
+
+    void sendStudyEvent({
+      participantId,
+      sessionId,
+      eventName: "shift_changed",
+      levelId: "caesar-cipher",
+      taskId: taskIds["caesar-cipher"],
+      result: `shift-${nextShift}`,
+      metadata: {
+        shift: nextShift,
+      },
+    });
+  }
+
   function handleSkipLevel() {
     markInteraction();
     const durationMs = currentTimestamp() - levelStartTimesRef.current[currentLevelId];
@@ -378,7 +642,7 @@ export function GameplayExperience({
     if (currentLevelId === "caesar-cipher") {
       setCaesarShift(caesarLevel.targetShift);
     } else if (currentLevelId === "xor-stream") {
-      setXorRuleSelection(xorLevel.rulePairs.map((p) => p.output));
+      setXorRuleSelection(xorLevel.rulePairs.map((pair) => pair.output));
       setXorRuleSolved(true);
       setXorRecoverySelection(xorExpectedRecovery.split(""));
     } else if (currentLevelId === "block-cipher") {
@@ -386,41 +650,22 @@ export function GameplayExperience({
       setBlockFeedback([]);
     }
 
-    setSkippedLevels((prev) => new Set(prev).add(currentLevelId));
-    setCompletedByLevel((prev) => ({ ...prev, [currentLevelId]: true }));
+    setSkippedLevels((previous) => new Set(previous).add(currentLevelId));
+    setCompletedByLevel((previous) => ({ ...previous, [currentLevelId]: true }));
     unlockCodex(currentLevelId);
-
     setStatusTone("info");
-    setStatusMessage("Level skipped. The correct answer has been filled in. Review the Codex summary, then continue.");
-  }
-
-  function chooseBit(
-    index: number,
-    value: string,
-    onChange: Dispatch<SetStateAction<string[]>>,
-  ) {
-    markInteraction();
-    onChange((previous) =>
-      previous.map((currentValue, currentIndex) =>
-        currentIndex === index ? value : currentValue,
-      ),
-    );
+    setStatusLine("// TRANSMISSION BYPASSED -- SIGNAL LOG UPDATED");
   }
 
   function continueAfterLevel(levelId: LevelId) {
     if (levelId === "block-cipher") {
-      setReadyForPosttest(true);
-      setStatusTone("success");
-      setStatusMessage(
-        "All three levels are complete. Review any unlocked Codex entries, then continue to the post-test.",
-      );
+      onComplete(Array.from(skippedLevels));
       return;
     }
 
     setCurrentLevelIndex((previous) => previous + 1);
-    setStatusMessage(null);
     setStatusTone("info");
-    setToast(null);
+    setStatusLine(levelReadyStatuses[levelOrder[currentLevelIndex + 1]]);
     setBlockFeedback([]);
   }
 
@@ -434,6 +679,8 @@ export function GameplayExperience({
       ...previous,
       [currentLevelId]: nextHintIndex,
     }));
+    setStatusTone("info");
+    setStatusLine(`// INTEL ${nextHintIndex} OPENED`);
 
     void sendStudyEvent({
       participantId,
@@ -467,6 +714,7 @@ export function GameplayExperience({
 
   function handleCodexEntrySelect(entryId: CodexEntryId) {
     setActiveCodexEntry(entryId);
+
     void sendStudyEvent({
       participantId,
       sessionId,
@@ -479,6 +727,19 @@ export function GameplayExperience({
     });
   }
 
+  function chooseBit(
+    index: number,
+    value: string,
+    onChange: Dispatch<SetStateAction<string[]>>,
+  ) {
+    markInteraction();
+    onChange((previous) =>
+      previous.map((currentValue, currentIndex) =>
+        currentIndex === index ? value : currentValue,
+      ),
+    );
+  }
+
   function submitCaesarGuess() {
     markInteraction();
     const attemptNo = getNextAttempt("caesar-cipher");
@@ -487,8 +748,7 @@ export function GameplayExperience({
 
     if (!isCorrect) {
       setStatusTone("error");
-      setStatusMessage("The preview is still off. Adjust the shift and try again.");
-      showToast("Wrong shift. Move the slider until the message becomes readable.");
+      setStatusLine("// SIGNAL DEGRADED -- ADJUST PARAMETERS");
       handleFailedAttempt("caesar-cipher", attemptNo, "wrong-shift");
       return;
     }
@@ -497,12 +757,11 @@ export function GameplayExperience({
       finalShift: caesarShift,
       shiftChanges: caesarShiftChanges,
       plaintext: caesarLevel.plaintext,
+      multiMessageNoticed: caesarShiftChanges > 3,
     });
     unlockCodex("caesar-cipher");
     setStatusTone("success");
-    setStatusMessage(
-      `${caesarLevel.successMessage} The Codex entry for Caesar Cipher is now unlocked.`,
-    );
+    setStatusLine("// TRANSMISSION DECRYPTED -- ALPHA FRAGMENT LOGGED");
   }
 
   function submitXorRuleBoard() {
@@ -513,8 +772,7 @@ export function GameplayExperience({
     if (xorRuleSelection.some((value) => value === "")) {
       logAttempt("xor-stream", attemptNo, "rule-incomplete");
       setStatusTone("error");
-      setStatusMessage("Finish each XOR output before checking the rule.");
-      showToast("Finish every output bit before checking Step 1.");
+      setStatusLine("// SIGNAL DEGRADED -- COMPLETE ALL OUTPUT CHANNELS");
       handleFailedAttempt("xor-stream", attemptNo, "rule-incomplete");
       return;
     }
@@ -523,38 +781,34 @@ export function GameplayExperience({
     logAttempt("xor-stream", attemptNo, isCorrect ? "rule-correct" : "rule-wrong");
 
     if (!isCorrect) {
-      const expected = xorLevel.rulePairs.map((p) => p.output);
-      const fb = xorRuleSelection.map((sel, i) =>
-        sel === expected[i] ? "correct" : "wrong",
+      const expected = xorLevel.rulePairs.map((pair) => pair.output);
+      const feedback = xorRuleSelection.map((selection, index) =>
+        selection === expected[index] ? "correct" : "wrong",
       );
-      setXorRuleFeedback(fb);
-      setFeedbackGeneration((g) => g + 1);
-      setTimeout(
-        () => setXorRuleFeedback(Array.from({ length: xorLevel.rulePairs.length }, () => null)),
-        1500,
-      );
+
+      setXorRuleFeedback(feedback);
+      setFeedbackGeneration((previous) => previous + 1);
+      window.setTimeout(() => {
+        setXorRuleFeedback(Array.from({ length: xorLevel.rulePairs.length }, () => null));
+      }, 1500);
       setStatusTone("error");
-      setStatusMessage("Close. Same bits give 0, and different bits give 1.");
-      showToast("Not quite. Same bits give 0 and different bits give 1.");
+      setStatusLine("// SIGNAL DEGRADED -- RECALIBRATE THE XOR RULE");
       handleFailedAttempt("xor-stream", attemptNo, "rule-wrong");
       return;
     }
 
+    setXorRuleSolved(true);
     setXorRuleFeedback(xorLevel.rulePairs.map(() => "correct"));
-    setFeedbackGeneration((g) => g + 1);
-    setTimeout(
-      () => setXorRuleFeedback(Array.from({ length: xorLevel.rulePairs.length }, () => null)),
-      1500,
-    );
-    handleSuccessfulAttempt("xor-stream", attemptNo, "rule-correct", {
+    setFeedbackGeneration((previous) => previous + 1);
+    window.setTimeout(() => {
+      setXorRuleFeedback(Array.from({ length: xorLevel.rulePairs.length }, () => null));
+    }, 1500);
+    handleIntermediateSuccess("xor-stream", attemptNo, "rule-correct", {
       stage: "rule-board",
       outputs: xorRuleAnswer,
     });
-    unlockCodex("xor-stream");
-    setStatusTone("success");
-    setStatusMessage(
-      `${xorLevel.successMessage} The Codex entry for XOR and stream ciphers is now unlocked.`,
-    );
+    setStatusTone("info");
+    setStatusLine("// CALIBRATION APPLIED -- RECOVERY CHANNEL ONLINE");
   }
 
   function submitXorRecovery() {
@@ -564,8 +818,7 @@ export function GameplayExperience({
     if (xorRecoverySelection.some((value) => value === "")) {
       logAttempt("xor-stream", attemptNo, "recovery-incomplete");
       setStatusTone("error");
-      setStatusMessage("Choose every output bit before recovering the signal.");
-      showToast("Choose every output bit before recovering the signal.");
+      setStatusLine("// SIGNAL DEGRADED -- OUTPUT BUFFER INCOMPLETE");
       handleFailedAttempt("xor-stream", attemptNo, "recovery-incomplete");
       return;
     }
@@ -579,533 +832,588 @@ export function GameplayExperience({
 
     if (!isCorrect) {
       const expectedBits = xorExpectedRecovery.split("");
-      const fb = xorRecoverySelection.map((sel, i) =>
-        sel === expectedBits[i] ? "correct" : "wrong",
+      const feedback = xorRecoverySelection.map((selection, index) =>
+        selection === expectedBits[index] ? "correct" : "wrong",
       );
-      setXorRecoveryFeedback(fb);
-      setFeedbackGeneration((g) => g + 1);
-      setTimeout(
-        () => setXorRecoveryFeedback(Array.from({ length: xorLevel.recoveryCipherBits.length }, () => null)),
-        1500,
-      );
+
+      setXorRecoveryFeedback(feedback);
+      setFeedbackGeneration((previous) => previous + 1);
+      window.setTimeout(() => {
+        setXorRecoveryFeedback(
+          Array.from({ length: xorLevel.recoveryCipherBits.length }, () => null),
+        );
+      }, 1500);
       setStatusTone("error");
-      setStatusMessage("The signal is still scrambled. Work across the channels one bit at a time.");
-      showToast("Wrong recovery. Compare each pair of bits one channel at a time.");
+      setStatusLine("// SIGNAL DEGRADED -- ADJUST RECOVERY BITS");
       handleFailedAttempt("xor-stream", attemptNo, "recovery-wrong");
       return;
     }
 
     setXorRecoveryFeedback(xorLevel.recoveryCipherBits.split("").map(() => "correct"));
-    setFeedbackGeneration((g) => g + 1);
-    setTimeout(
-      () => setXorRecoveryFeedback(Array.from({ length: xorLevel.recoveryCipherBits.length }, () => null)),
-      1500,
-    );
+    setFeedbackGeneration((previous) => previous + 1);
+    window.setTimeout(() => {
+      setXorRecoveryFeedback(
+        Array.from({ length: xorLevel.recoveryCipherBits.length }, () => null),
+      );
+    }, 1500);
     handleSuccessfulAttempt("xor-stream", attemptNo, "recovery-correct", {
       stage: "signal-recovery",
       recoveredBits: xorRecoveryPreview,
     });
     unlockCodex("xor-stream");
     setStatusTone("success");
-    setStatusMessage(
-      `${xorLevel.successMessage} The Codex entry for XOR and stream ciphers is now unlocked.`,
-    );
+    setStatusLine("// TRANSMISSION DECRYPTED -- BRAVO FRAGMENT LOGGED");
   }
 
   function submitBlockSequence() {
     markInteraction();
     const attemptNo = getNextAttempt("block-cipher");
     const evaluation = evaluateBlockSequence(blockSelection);
-    logAttempt("block-cipher", attemptNo, evaluation.correct ? "correct-sequence" : "wrong-sequence");
+    const sequenceSnapshot = formatBlockSequence(blockSelection);
+    const nextHistory = [...blockAttemptHistory, sequenceSnapshot];
+
+    setBlockAttemptHistory(nextHistory);
+    logAttempt(
+      "block-cipher",
+      attemptNo,
+      evaluation.correct ? "correct-sequence" : "wrong-sequence",
+    );
 
     if (!evaluation.correct) {
       setBlockFeedback(evaluation.feedback);
       setStatusTone("error");
-      setStatusMessage("The setup is still off. Use the feedback to keep the key separate from the IV.");
-      showToast("Wrong order. The key is the secret and the IV is only the starter value.");
+      setStatusLine("// SIGNAL DEGRADED -- ADJUST PARAMETERS");
       handleFailedAttempt("block-cipher", attemptNo, "wrong-sequence");
       return;
     }
 
     setBlockFeedback([]);
-    handleSuccessfulAttempt("block-cipher", attemptNo, "correct-sequence");
+    handleSuccessfulAttempt("block-cipher", attemptNo, "correct-sequence", {
+      configurationSequence: nextHistory,
+      attemptsBeforeCorrect: attemptNo - 1,
+    });
+    void sendStudyEvent({
+      participantId,
+      sessionId,
+      eventName: "channel_configured",
+      levelId: "block-cipher",
+      taskId: taskIds["block-cipher"],
+      attemptNo,
+      result: "correct-sequence",
+      metadata: {
+        configurationSequence: nextHistory,
+        attemptsBeforeCorrect: attemptNo - 1,
+      },
+    });
     unlockCodex("block-cipher");
     setStatusTone("success");
-    setStatusMessage(blockCipherLevel.successMessage);
+    setStatusLine("// CHANNEL CONFIGURED -- ENCRYPTION ACTIVE");
+  }
+
+  function renderBurst() {
+    return <div key={`signal-burst-${signalBurstKey}`} className="terminal-static-burst" />;
   }
 
   function renderCaesarLevel() {
-    return (
-      <div className="space-y-5">
-        <div className="rounded-[24px] border border-[var(--border)] bg-[var(--card)]/75 p-5">
-          <p className="font-mono text-xs uppercase tracking-[0.28em] text-[var(--accent-strong)]">
-            Intercepted text
-          </p>
-          <p className="mt-3 break-words font-mono text-2xl tracking-[0.2em] text-[var(--ink)] sm:text-[1.75rem]">
-            {caesarLevel.ciphertext}
-          </p>
-        </div>
-        <div className="rounded-[24px] border border-[var(--border)] bg-[var(--card-strong)] p-5">
-          <div className="flex flex-col">
-            <div className="mb-6 flex w-full items-center justify-between">
-              <span className="font-mono text-xs uppercase tracking-[0.2em] text-[var(--ink-muted)]">
-                Frequency Tuner
-              </span>
-              <div className="flex items-center gap-2 rounded-xl border border-[var(--border-strong)] bg-[var(--card)] px-3 py-1 shadow-[0_0_10px_rgba(78,155,255,0.15)]">
-                <span className="font-mono text-[0.65rem] uppercase tracking-widest text-[var(--accent-strong)]">
-                  Shift_Val
-                </span>
-                <span className="font-mono text-xl font-bold text-[var(--ink)]">
-                  {caesarShift.toString().padStart(2, "0")}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex w-full items-center gap-4 sm:gap-6">
-              <button
-                type="button"
-                onClick={() => {
-                  if (caesarShift > 0) {
-                    markInteraction();
-                    const nextShift = caesarShift - 1;
-                    setCaesarShift(nextShift);
-                    setCaesarShiftChanges((prev) => prev + 1);
-                    void sendStudyEvent({
-                      participantId,
-                      sessionId,
-                      eventName: "shift_changed",
-                      levelId: "caesar-cipher",
-                      taskId: taskIds["caesar-cipher"],
-                      result: `shift-${nextShift}`,
-                      metadata: { shift: nextShift },
-                    });
-                  }
-                }}
-                disabled={caesarShift === 0}
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-[var(--border-strong)] bg-[var(--card)] text-2xl font-bold text-[var(--ink)] transition-all hover:border-[var(--accent)] hover:bg-[#2d7ff9]/10 hover:text-[var(--accent-strong)] hover:shadow-[0_0_15px_rgba(78,155,255,0.3)] disabled:opacity-30 disabled:hover:border-[var(--border-strong)] disabled:hover:bg-[var(--card)] disabled:hover:text-[var(--ink)] disabled:hover:shadow-none"
-              >
-                -
-              </button>
-
-              <div className="relative flex-1 py-4">
-                <input
-                  type="range"
-                  min={0}
-                  max={25}
-                  value={caesarShift}
-                  onChange={(event) => {
-                    markInteraction();
-                    const nextShift = Number(event.target.value);
-                    setCaesarShift(nextShift);
-                    setCaesarShiftChanges((previous) => previous + 1);
-                    void sendStudyEvent({
-                      participantId,
-                      sessionId,
-                      eventName: "shift_changed",
-                      levelId: "caesar-cipher",
-                      taskId: taskIds["caesar-cipher"],
-                      result: `shift-${nextShift}`,
-                      metadata: {
-                        shift: nextShift,
-                      },
-                    });
-                  }}
-                  className="absolute inset-0 z-10 w-full cursor-pointer opacity-0"
-                />
-                
-                {/* Custom Track Background */}
-                <div className="pointer-events-none relative h-2 w-full rounded-full bg-[var(--card)] border border-[var(--border-strong)]">
-                  {/* Filled portion */}
-                  <div
-                    className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-[var(--accent)] to-[var(--accent-strong)] shadow-[0_0_8px_rgba(45,127,249,0.5)] transition-all duration-75"
-                    style={{ width: `${(caesarShift / 25) * 100}%` }}
-                  />
-                  {/* Custom Thumb */}
-                  <div
-                    className="absolute top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-[var(--card-strong)] bg-[var(--ink)] shadow-[0_0_12px_rgba(78,155,255,0.8)] transition-all duration-75"
-                    style={{ left: `${(caesarShift / 25) * 100}%` }}
-                  />
-                </div>
-                
-                {/* Tick marks */}
-                <div className="pointer-events-none mt-4 flex justify-between px-1">
-                  {[0, 5, 10, 15, 20, 25].map((tick) => (
-                    <div key={tick} className="flex flex-col items-center">
-                      <div className="h-1.5 w-[2px] bg-[var(--ink-muted)] opacity-40" />
-                      <span className="mt-1 font-mono text-[0.55rem] text-[var(--ink-muted)] opacity-60">
-                        {tick}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  if (caesarShift < 25) {
-                    markInteraction();
-                    const nextShift = caesarShift + 1;
-                    setCaesarShift(nextShift);
-                    setCaesarShiftChanges((prev) => prev + 1);
-                    void sendStudyEvent({
-                      participantId,
-                      sessionId,
-                      eventName: "shift_changed",
-                      levelId: "caesar-cipher",
-                      taskId: taskIds["caesar-cipher"],
-                      result: `shift-${nextShift}`,
-                      metadata: { shift: nextShift },
-                    });
-                  }
-                }}
-                disabled={caesarShift === 25}
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-[var(--border-strong)] bg-[var(--card)] text-2xl font-bold text-[var(--ink)] transition-all hover:border-[var(--accent)] hover:bg-[#2d7ff9]/10 hover:text-[var(--accent-strong)] hover:shadow-[0_0_15px_rgba(78,155,255,0.3)] disabled:opacity-30 disabled:hover:border-[var(--border-strong)] disabled:hover:bg-[var(--card)] disabled:hover:text-[var(--ink)] disabled:hover:shadow-none"
-              >
-                +
-              </button>
-            </div>
-          </div>
-          <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[var(--card-soft)] px-4 py-4">
-            <p className="text-xs uppercase tracking-[0.25em] text-[var(--ink-muted)]">
-              Live plaintext preview
+    if (completedByLevel[currentLevelId]) {
+      return (
+        <div className="space-y-4">
+          <div className="terminal-panel relative overflow-hidden">
+            {renderBurst()}
+            <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#4ade80]">
+              {"// TRANSMISSION DECRYPTED"}
             </p>
-              <p className="mt-2 break-words font-mono text-xl text-[var(--ink)] sm:text-2xl">
-                {caesarPreview}
-              </p>
+            <p className="mt-2 font-mono text-xs uppercase tracking-[0.22em] text-[#5a6a7a]">
+              {"// CONTENT: CLASSIFIED FRAGMENT 1/3"}
+            </p>
+            <pre className="mt-5 whitespace-pre-wrap font-mono text-lg leading-8 text-[#d4a843]">
+              {caesarLevel.plaintext}
+            </pre>
+            <div className="mt-5 space-y-2 font-mono text-sm leading-7 text-[#4ade80]">
+              <p>{"// COORDINATES EMBEDDED: 48.2082 N, 16.3738 E"}</p>
+              <p>{"// KEYWORD RECOVERED: RENDEZVOUS"}</p>
+              <p>{"// LOGGING TO SIGNAL LOG..."}</p>
+            </div>
           </div>
         </div>
-        <div className="flex justify-end gap-3">
-          {attempts >= 3 && !completedByLevel[currentLevelId] && (
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        <div className="terminal-panel">
+          <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#5a6a7a]">
+            {"// RAW INTERCEPT -- ALPHA CHANNEL"}
+          </p>
+          <p className="mt-2 font-mono text-xs uppercase tracking-[0.18em] text-[#5a6a7a]">
+            {"// RECEIVED: 03:42:17 UTC"}
+          </p>
+          <pre className="mt-4 whitespace-pre-wrap font-mono text-lg leading-8 text-[#d4a843]">
+            {caesarLevel.ciphertext}
+          </pre>
+        </div>
+
+        <div className="grid gap-4 xl:grid-cols-[240px_minmax(0,1fr)]">
+          <div className="terminal-panel flex items-center justify-center">
+            <FrequencyDial value={caesarShift} onChange={updateCaesarShift} />
+          </div>
+
+          <div className="space-y-4">
+            <div className="terminal-panel">
+              <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#5a6a7a]">
+                {`// DECRYPT ATTEMPT [SHIFT: ${caesarShift.toString().padStart(2, "0")}]`}
+              </p>
+              <pre className="mt-4 whitespace-pre-wrap font-mono text-lg leading-8 text-[#d4a843]">
+                {alphaTrafficPreview[0]?.preview}
+              </pre>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              {alphaTrafficPreview.slice(1).map((intercept) => (
+                <div key={intercept.id} className="terminal-panel">
+                  <p className="font-mono text-xs uppercase tracking-[0.24em] text-[#5a6a7a]">
+                    {`// ${intercept.label}`}
+                  </p>
+                  <p className="mt-2 font-mono text-[0.7rem] uppercase tracking-[0.18em] text-[#5a6a7a]">
+                    {`// RECEIVED: ${intercept.receivedAt}`}
+                  </p>
+                  <pre className="mt-4 whitespace-pre-wrap font-mono text-base leading-7 text-[#c3a257]">
+                    {intercept.preview}
+                  </pre>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap justify-end gap-3">
+          {attempts >= 3 ? (
             <Button
               variant="secondary"
               onClick={handleSkipLevel}
-              className="border-amber-500 text-amber-500 hover:bg-amber-500/10"
+              className="rounded border border-[#624616] bg-transparent font-mono text-xs uppercase tracking-[0.16em] text-[#d4a843] hover:bg-[#2a1c08]"
             >
-              Show answer and continue
+              {"// BYPASS ALPHA"}
             </Button>
-          )}
-          <Button onClick={submitCaesarGuess}>Submit shift</Button>
+          ) : null}
+          <Button
+            onClick={submitCaesarGuess}
+            className="rounded border border-[#1a2840] bg-[#162134] font-mono text-xs uppercase tracking-[0.2em] text-[#d4a843] shadow-none hover:bg-[#1d2a43]"
+          >
+            {"// VERIFY TRANSMISSION"}
+          </Button>
         </div>
       </div>
     );
   }
 
   function renderXorLevel() {
+    if (completedByLevel[currentLevelId]) {
+      return (
+        <div className="space-y-4">
+          <div className="terminal-panel relative overflow-hidden">
+            {renderBurst()}
+            <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#4ade80]">
+              {"// TRANSMISSION BRAVO -- DECRYPTED"}
+            </p>
+            <p className="mt-2 font-mono text-xs uppercase tracking-[0.22em] text-[#5a6a7a]">
+              {"// CONTENT: CLASSIFIED FRAGMENT 2/3"}
+            </p>
+            <div className="mt-5 space-y-2 font-mono text-lg leading-8 text-[#d4a843]">
+              <p>PACKAGE TRANSFER CONFIRMED</p>
+              <p>WINDOW: 0200-0215 UTC</p>
+            </div>
+            <p className="mt-5 font-mono text-sm text-[#4ade80]">
+              {"// LOGGING TO SIGNAL LOG..."}
+            </p>
+          </div>
+        </div>
+      );
+    }
+
     return (
-      <div className="space-y-5">
-        {/* ── Phase 1 Header ── */}
-        <div className="rounded-[24px] border border-[var(--border)] bg-[var(--card)]/75 p-5">
-          <p className="font-mono text-xs uppercase tracking-[0.28em] text-[var(--accent-strong)]">
-            Signal Analysis
+      <div className="space-y-4">
+        <div className="terminal-panel">
+          <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#5a6a7a]">
+            {"// SIGNAL PROCESSOR -- CALIBRATION MODE"}
           </p>
-          <h3 className="mt-3 text-2xl font-semibold text-[var(--ink)]">
-            Calibrate the XOR Decoder
-          </h3>
-          <p className="mt-2 text-base leading-7 text-[var(--ink-muted)]">
-            When two signal bits match, the decoder outputs 0. When they differ, it outputs 1. Toggle each output channel to calibrate.
+          <p className="mt-2 font-mono text-xs uppercase tracking-[0.2em] text-[#5a6a7a]">
+            {"// ENCODING METHOD: BITWISE TRANSFORM"}
+          </p>
+          <p className="mt-4 font-mono text-sm leading-7 text-[#c3a257]">
+            {"// CONFIGURE DECODE RULES: set each output channel based on the input pair."}
           </p>
         </div>
 
-        {/* ── Phase 1 Circuit Board Rows ── */}
-        <div className="space-y-3 rounded-[24px] border border-[var(--border)] bg-[var(--card-strong)] p-5">
+        <div className="terminal-panel space-y-3">
           {xorLevel.rulePairs.map((pair, index) => {
             const isActive = xorRuleSelection[index] !== "";
-            const fb = xorRuleFeedback[index];
-            const feedbackClass = fb === "correct" ? "xor-row-correct" : fb === "wrong" ? "xor-row-wrong" : "";
+            const feedback = xorRuleFeedback[index];
+            const feedbackClass =
+              feedback === "correct"
+                ? "xor-row-correct"
+                : feedback === "wrong"
+                  ? "xor-row-wrong"
+                  : "";
 
             return (
               <div
                 key={`rule-${pair.left}-${pair.right}-${index}-${feedbackGeneration}`}
-                className={`rounded-2xl border border-[var(--border)] bg-[var(--card)]/55 px-4 py-4 ${feedbackClass}`}
+                className={`rounded border border-[#1a2840] bg-[#09111c] px-4 py-4 ${feedbackClass}`}
               >
-                {/* Mobile label */}
-                <p className="mb-3 font-mono text-[0.65rem] uppercase tracking-widest text-[var(--ink-muted)] md:hidden">
-                  Bit Channel {index + 1}
+                <p className="mb-3 font-mono text-[0.7rem] uppercase tracking-[0.18em] text-[#5a6a7a]">
+                  {`// CHANNEL ${index + 1}: [${pair.left}] XOR [${pair.right}] = [ ? ]`}
                 </p>
-                {/* Circuit row */}
                 <div className="flex items-center gap-3">
-                  {/* Input A node */}
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="hidden text-[0.6rem] uppercase tracking-widest text-[var(--ink-muted)] md:block">
-                      Signal
-                    </span>
-                    <div className={`bit-node ${isActive ? "bit-node--active" : ""}`}>
-                      {pair.left}
-                    </div>
-                  </div>
-                  {/* Wire A */}
+                  <div className={`bit-node ${isActive ? "bit-node--active" : ""}`}>{pair.left}</div>
                   <div className={`xor-wire flex-1 ${isActive ? "xor-wire--active" : ""}`} />
-                  {/* Input B node */}
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="hidden text-[0.6rem] uppercase tracking-widest text-[var(--ink-muted)] md:block">
-                      Key
-                    </span>
-                    <div className={`bit-node ${isActive ? "bit-node--active" : ""}`}>
-                      {pair.right}
-                    </div>
-                  </div>
-                  {/* Wire B */}
+                  <div className={`bit-node ${isActive ? "bit-node--active" : ""}`}>{pair.right}</div>
                   <div className={`xor-wire flex-1 ${isActive ? "xor-wire--active" : ""}`} />
-                  {/* XOR Gate */}
                   <div className={`xor-gate ${isActive ? "xor-gate--active" : ""}`}>XOR</div>
-                  {/* Wire C */}
                   <div className={`xor-wire flex-1 ${isActive ? "xor-wire--active" : ""}`} />
-                  {/* Rocker Toggle Output */}
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="hidden text-[0.6rem] uppercase tracking-widest text-[var(--ink-muted)] md:block">
-                      Out
-                    </span>
-                    <div className={`rocker-toggle ${isActive ? "rocker-toggle--active" : ""}`}>
-                      <span
-                        className={`rocker-toggle__pill ${
-                          xorRuleSelection[index] === ""
-                            ? "rocker-toggle__pill--hidden"
-                            : xorRuleSelection[index] === "1"
-                              ? "rocker-toggle__pill--right"
-                              : ""
+                  <div className={`rocker-toggle ${isActive ? "rocker-toggle--active" : ""}`}>
+                    <span
+                      className={`rocker-toggle__pill ${
+                        xorRuleSelection[index] === ""
+                          ? "rocker-toggle__pill--hidden"
+                          : xorRuleSelection[index] === "1"
+                            ? "rocker-toggle__pill--right"
+                            : ""
+                      }`}
+                    />
+                    {["0", "1"].map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        className={`rocker-toggle__btn ${
+                          xorRuleSelection[index] === value
+                            ? "rocker-toggle__btn--selected"
+                            : "rocker-toggle__btn--unselected"
                         }`}
-                      />
-                      {["0", "1"].map((value) => (
-                        <button
-                          key={value}
-                          type="button"
-                          className={`rocker-toggle__btn ${
-                            xorRuleSelection[index] === value
-                              ? "rocker-toggle__btn--selected"
-                              : "rocker-toggle__btn--unselected"
-                          }`}
-                          onClick={() => chooseBit(index, value, setXorRuleSelection)}
-                          role="radio"
-                          aria-checked={xorRuleSelection[index] === value}
-                          aria-label={`Output ${value} for bit pair ${pair.left} XOR ${pair.right}`}
-                        >
-                          {value}
-                        </button>
-                      ))}
-                    </div>
+                        onClick={() => chooseBit(index, value, setXorRuleSelection)}
+                        role="radio"
+                        aria-checked={xorRuleSelection[index] === value}
+                        aria-label={`Output ${value} for XOR pair ${pair.left} and ${pair.right}`}
+                      >
+                        {value}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
             );
           })}
 
-          {/* Decoder Output Buffer */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3 rounded-2xl bg-[var(--card)] px-4 py-3">
-              <span className="text-xs uppercase tracking-[0.2em] text-[var(--ink-muted)]">
-                Decoder Output
-              </span>
-              <div className="flex gap-2">
-                {xorRuleSelection.map((bit, i) => (
-                  <div
-                    key={`led-rule-${i}`}
-                    className={`led-dot ${bit !== "" ? "led-dot--on" : ""}`}
-                  >
-                    {bit || "?"}
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 items-center w-full sm:w-auto">
-              {attempts >= 3 && !completedByLevel[currentLevelId] && !xorRuleSolved && (
-                <Button
-                  variant="secondary"
-                  onClick={handleSkipLevel}
-                  className="border-amber-500 text-amber-500 hover:bg-amber-500/10"
-                >
-                  Show answer and continue
-                </Button>
-              )}
+          <div className="rounded border border-[#1a2840] bg-[#09111c] px-4 py-4 font-mono text-sm text-[#c3a257]">
+            <p>{`// DECODER OUTPUT: [ ${xorRuleSelection.map((bit) => bit || "?").join(" ")} ]`}</p>
+            <p className="mt-2">{`// STATUS: ${xorRuleSolved ? "CALIBRATED" : "UNCALIBRATED"}`}</p>
+          </div>
+
+          <div className="flex flex-wrap justify-end gap-3">
+            {attempts >= 3 && !xorRuleSolved ? (
               <Button
-                onClick={submitXorRuleBoard}
-                className="font-mono text-sm uppercase tracking-widest px-8"
+                variant="secondary"
+                onClick={handleSkipLevel}
+                className="rounded border border-[#624616] bg-transparent font-mono text-xs uppercase tracking-[0.16em] text-[#d4a843] hover:bg-[#2a1c08]"
               >
-                Run Diagnostics
+                {"// BYPASS BRAVO"}
               </Button>
-            </div>
+            ) : null}
+            <Button
+              onClick={submitXorRuleBoard}
+              className="rounded border border-[#1a2840] bg-[#162134] font-mono text-xs uppercase tracking-[0.2em] text-[#d4a843] shadow-none hover:bg-[#1d2a43]"
+            >
+              {"// APPLY CALIBRATION"}
+            </Button>
           </div>
         </div>
 
+        {xorRuleSolved ? (
+          <div ref={xorStepTwoRef} className="terminal-panel stage-unlock-enter space-y-4">
+            <div>
+              <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#5a6a7a]">
+                {"// SIGNAL RECOVERY MODE"}
+              </p>
+              <p className="mt-2 font-mono text-sm leading-7 text-[#c3a257]">
+                {"// Corrupted transmission above, key stream below, recovery buffer awaiting output."}
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-4">
+              {xorLevel.recoveryCipherBits.split("").map((cipherBit, index) => {
+                const feedback = xorRecoveryFeedback[index];
+                const columnClass =
+                  feedback === "correct"
+                    ? "xor-row-correct"
+                    : feedback === "wrong"
+                      ? "xor-row-wrong"
+                      : "";
+
+                return (
+                  <div
+                    key={`recovery-${index}-${feedbackGeneration}`}
+                    className={`rounded border border-[#1a2840] bg-[#09111c] p-4 ${columnClass}`}
+                  >
+                    <p className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-[#5a6a7a]">
+                      {`// NODE ${index + 1}`}
+                    </p>
+                    <div className="mt-4 space-y-4">
+                      <div>
+                        <p className="mb-2 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-[#5a6a7a]">
+                          CIPHER
+                        </p>
+                        <div className="bit-node bit-node--active">{cipherBit}</div>
+                      </div>
+                      <div>
+                        <p className="mb-2 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-[#5a6a7a]">
+                          KEY
+                        </p>
+                        <div className="bit-node bit-node--active">
+                          {xorLevel.recoveryKeyBits[index]}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="mb-2 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-[#5a6a7a]">
+                          OUTPUT
+                        </p>
+                        <div className="rocker-toggle rocker-toggle--active">
+                          <span
+                            className={`rocker-toggle__pill ${
+                              xorRecoverySelection[index] === ""
+                                ? "rocker-toggle__pill--hidden"
+                                : xorRecoverySelection[index] === "1"
+                                  ? "rocker-toggle__pill--right"
+                                  : ""
+                            }`}
+                          />
+                          {["0", "1"].map((value) => (
+                            <button
+                              key={value}
+                              type="button"
+                              className={`rocker-toggle__btn ${
+                                xorRecoverySelection[index] === value
+                                  ? "rocker-toggle__btn--selected"
+                                  : "rocker-toggle__btn--unselected"
+                              }`}
+                              onClick={() => chooseBit(index, value, setXorRecoverySelection)}
+                              role="radio"
+                              aria-checked={xorRecoverySelection[index] === value}
+                              aria-label={`Recovery output ${value} for node ${index + 1}`}
+                            >
+                              {value}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="rounded border border-[#1a2840] bg-[#09111c] px-4 py-4 font-mono text-sm text-[#c3a257]">
+              <p>{`// DECODER OUTPUT: [ ${xorRecoverySelection.map((bit) => bit || "?").join(" ")} ]`}</p>
+            </div>
+
+            <div className="flex flex-wrap justify-end gap-3">
+              {attempts >= 3 ? (
+                <Button
+                  variant="secondary"
+                  onClick={handleSkipLevel}
+                  className="rounded border border-[#624616] bg-transparent font-mono text-xs uppercase tracking-[0.16em] text-[#d4a843] hover:bg-[#2a1c08]"
+                >
+                  {"// BYPASS BRAVO"}
+                </Button>
+              ) : null}
+              <Button
+                onClick={submitXorRecovery}
+                className="rounded border border-[#1a2840] bg-[#162134] font-mono text-xs uppercase tracking-[0.2em] text-[#d4a843] shadow-none hover:bg-[#1d2a43]"
+              >
+                {"// RECOVER SIGNAL"}
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </div>
     );
   }
 
   function renderBlockCipherLevel() {
+    if (completedByLevel[currentLevelId]) {
+      return (
+        <div className="space-y-4">
+          <div className="terminal-panel relative overflow-hidden">
+            {renderBurst()}
+            <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#4ade80]">
+              {"// CHANNEL CONFIGURED -- ENCRYPTION ACTIVE"}
+            </p>
+            <p className="mt-2 font-mono text-xs uppercase tracking-[0.22em] text-[#5a6a7a]">
+              {"// SECURE RESPONSE: TRANSMITTED"}
+            </p>
+            <div className="mt-5 space-y-2 font-mono text-sm leading-7 text-[#d4a843]">
+              <p>{"// TRANSMISSION CHARLIE -- MISSION COMPLETE"}</p>
+              <p>{"// ALL FRAGMENTS RECOVERED:"}</p>
+              <p>{"//   1/3 -- RENDEZVOUS COORDINATES"}</p>
+              <p>{"//   2/3 -- TRANSFER WINDOW"}</p>
+              <p>{"//   3/3 -- CHANNEL SECURE"}</p>
+            </div>
+            <p className="mt-5 font-mono text-sm text-[#4ade80]">
+              {"// SIGNAL LOG UPDATED -- FULL DOSSIER AVAILABLE"}
+            </p>
+          </div>
+        </div>
+      );
+    }
+
     return (
-      <div className="space-y-8">
-        <div className="rounded-[24px] border border-[var(--border)] bg-[var(--card)]/75 p-5">
-          <p className="font-mono text-xs uppercase tracking-[0.28em] text-[var(--accent-strong)]">
-            Data Nodes Bank
+      <div className="space-y-4">
+        <div className="terminal-panel">
+          <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#5a6a7a]">
+            {"// SECURE CHANNEL -- CONFIGURATION REQUIRED"}
           </p>
-          <p className="mt-2 text-sm text-[var(--ink-muted)]">
-            Drag a cryptographic node below, or click to select, then click or drop it into an empty sequence socket to deploy it. Click a deployed node to return it to the bank.
+          <div className="mt-3 space-y-1 font-mono text-sm leading-7 text-[#c3a257]">
+            <p>{"// ADVERSARY TRANSMISSION: INCOMING"}</p>
+            <p>{"// OUR RESPONSE WINDOW: CLOSING"}</p>
+            <p>{"// CONFIGURE OUTBOUND ENCRYPTION PIPELINE"}</p>
+          </div>
+        </div>
+
+        <div className="terminal-panel">
+          <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#5a6a7a]">
+            {"// COMPONENT INVENTORY"}
           </p>
-          <div className="mt-6 flex flex-wrap justify-center gap-4 sm:gap-6">
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
             {blockCipherLevel.choices.map((choice) => {
               const isSelected = selectedBlockChoice === choice.id;
               const isUsed = blockSelection.includes(choice.id);
-              
+
               return (
-                <div 
+                <button
                   key={choice.id}
-                  className={[
-                    "relative transition-all duration-300",
-                    isUsed ? "opacity-20 cursor-not-allowed scale-95" : "cursor-pointer hover:scale-105",
-                    isSelected ? "z-10 scale-110 drop-shadow-[0_0_15px_rgba(56,189,248,0.5)]" : "drop-shadow-sm",
-                  ].join(" ")}
-                  style={{
-                    width: "7rem",
-                    height: "8rem",
-                    filter: isUsed ? "grayscale(100%)" : "none"
+                  type="button"
+                  draggable={!isUsed}
+                  disabled={isUsed}
+                  onDragStart={(event) => {
+                    event.dataTransfer.setData("text/plain", choice.id);
                   }}
+                  onClick={() => {
+                    if (isUsed) {
+                      return;
+                    }
+
+                    markInteraction();
+                    setSelectedBlockChoice(isSelected ? null : choice.id);
+                  }}
+                  className={[
+                    "rounded border px-4 py-4 text-left transition",
+                    isUsed
+                      ? "cursor-not-allowed border-[#1a2840] bg-[#09111c] opacity-40"
+                      : isSelected
+                        ? "border-[#d4a843] bg-[#182338]"
+                        : "border-[#1a2840] bg-[#0d1625] hover:border-[#d4a843]",
+                  ].join(" ")}
                 >
-                  <div
-                    className={[
-                      "absolute inset-0 transition-colors p-[2px]",
-                      isSelected ? "bg-[var(--accent)]" : "bg-[var(--border-strong)]"
-                    ].join(" ")}
-                    style={{ clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)" }}
-                  >
-                    <button
-                      draggable={!isUsed}
-                      onDragStart={(e) => {
-                        e.dataTransfer.setData("text/plain", choice.id);
-                      }}
-                      onClick={() => {
-                        if (!isUsed) {
-                          markInteraction();
-                          setSelectedBlockChoice(isSelected ? null : choice.id);
-                        }
-                      }}
-                      disabled={isUsed}
-                      className={[
-                        "flex h-full w-full flex-col items-center justify-center transition-colors",
-                        isSelected 
-                          ? "bg-[#2d7ff9]/20" 
-                          : "bg-[var(--card-strong)] hover:bg-[var(--card-soft)]"
-                      ].join(" ")}
-                      style={{ clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)" }}
-                      type="button"
-                    >
-                      <span className={[
-                        "font-mono text-xs font-bold tracking-wider text-center px-1",
-                        isSelected || isUsed ? "text-[var(--accent-strong)]" : "text-[var(--ink)]"
-                      ].join(" ")}>
-                        {choice.label}
-                      </span>
-                    </button>
-                  </div>
-                </div>
+                  <p className="font-mono text-xs uppercase tracking-[0.18em] text-[#d4a843]">
+                    {choice.label}
+                  </p>
+                  <p className="mt-3 font-mono text-xs leading-6 text-[#5a6a7a]">
+                    {choice.helper}
+                  </p>
+                </button>
               );
             })}
           </div>
         </div>
 
-        <div className="relative rounded-[24px] border border-[var(--border)] bg-[var(--card-strong)] p-6">
-          <p className="mb-6 font-mono text-xs uppercase tracking-[0.28em] text-[var(--ink-muted)]">
-            Encryption Sequence Sockets
+        <div className="terminal-panel">
+          <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#5a6a7a]">
+            {"// PIPELINE CONFIGURATION"}
           </p>
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between relative">
-            <div className="hidden sm:block absolute left-10 right-10 top-[4rem] h-[2px] bg-[var(--border-strong)] z-0" />
-            
+          <div className="mt-5 grid gap-3 xl:grid-cols-5">
             {blockCipherLevel.slotLabels.map((slotLabel, index) => {
               const currentChoiceId = blockSelection[index];
-              const choiceObj = currentChoiceId 
-                ? blockCipherLevel.choices.find((c) => c.id === currentChoiceId) 
+              const choice = currentChoiceId
+                ? blockCipherLevel.choices.find((item) => item.id === currentChoiceId) ?? null
                 : null;
-                
+
               return (
-                <div key={slotLabel} className="relative z-10 flex flex-1 flex-col items-center group">
-                  <div className="mb-3 h-6 text-center">
-                    <span className="font-mono text-[0.65rem] font-bold uppercase tracking-widest text-[var(--ink-muted)]">
-                      {slotLabel.split(":")[0]}
-                    </span>
-                  </div>
-                  
-                  <div 
-                    className={[
-                      "relative transition-all duration-300",
-                      selectedBlockChoice && !currentChoiceId ? "animate-pulse cursor-pointer hover:scale-105" : "",
-                      currentChoiceId ? "cursor-pointer hover:scale-105" : ""
-                    ].join(" ")}
-                    style={{ width: "6rem", height: "7rem" }}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      const draggedId = e.dataTransfer.getData("text/plain");
-                      if (draggedId) {
-                        markInteraction();
-                        setBlockSelection((prev) => {
-                          const next = [...prev];
-                          const existingIndex = next.indexOf(draggedId);
-                          if (existingIndex !== -1) next[existingIndex] = "";
-                          next[index] = draggedId;
+                <div
+                  key={slotLabel}
+                  className="rounded border border-[#1a2840] bg-[#09111c] p-3"
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    const draggedId = event.dataTransfer.getData("text/plain");
+
+                    if (!draggedId) {
+                      return;
+                    }
+
+                    markInteraction();
+                    setBlockSelection((previous) => {
+                      const next = [...previous];
+                      const existingIndex = next.indexOf(draggedId);
+
+                      if (existingIndex !== -1) {
+                        next[existingIndex] = "";
+                      }
+
+                      next[index] = draggedId;
+                      return next;
+                    });
+                    setSelectedBlockChoice(null);
+                  }}
+                >
+                  <p className="font-mono text-[0.68rem] uppercase tracking-[0.18em] text-[#5a6a7a]">
+                    {`// ${slotLabel}`}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      markInteraction();
+
+                      if (selectedBlockChoice) {
+                        setBlockSelection((previous) => {
+                          const next = [...previous];
+                          const existingIndex = next.indexOf(selectedBlockChoice);
+
+                          if (existingIndex !== -1) {
+                            next[existingIndex] = "";
+                          }
+
+                          next[index] = selectedBlockChoice;
                           return next;
                         });
                         setSelectedBlockChoice(null);
+                        return;
                       }
-                    }}
-                  >
-                    <div
-                      className={[
-                        "absolute inset-0 p-[2px] transition-colors",
-                        currentChoiceId 
-                          ? "bg-[var(--accent-strong)] drop-shadow-[0_0_10px_rgba(56,189,248,0.4)]" 
-                          : selectedBlockChoice 
-                            ? "bg-[#2d7ff9]/50" 
-                            : "bg-[var(--border-strong)] opacity-50"
-                      ].join(" ")}
-                      style={{ clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)" }}
-                    >
-                      <button
-                        onClick={() => {
-                          markInteraction();
-                          if (selectedBlockChoice) {
-                            setBlockSelection((prev) => {
-                              const next = [...prev];
-                              const existingIndex = next.indexOf(selectedBlockChoice);
-                              if (existingIndex !== -1) next[existingIndex] = "";
-                              next[index] = selectedBlockChoice;
-                              return next;
-                            });
-                            setSelectedBlockChoice(null);
-                          } else if (currentChoiceId) {
-                            setBlockSelection((prev) => {
-                              const next = [...prev];
-                              next[index] = "";
-                              return next;
-                            });
-                            setSelectedBlockChoice(currentChoiceId);
-                          }
-                        }}
-                        className={[
-                          "flex h-full w-full flex-col items-center justify-center transition-colors",
-                          currentChoiceId 
-                            ? "bg-[#2d7ff9]/20" 
-                            : "bg-[var(--card)]"
-                        ].join(" ")}
-                        style={{ clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)" }}
-                        type="button"
-                      >
-                        {choiceObj ? (
-                          <span className="font-mono text-[0.65rem] font-bold tracking-wider text-[var(--ink)] drop-shadow-md text-center px-1">
-                            {choiceObj.label}
-                          </span>
-                        ) : (
-                          <span className="text-xl text-[var(--ink-muted)] opacity-30">+</span>
-                        )}
-                      </button>
-                    </div>
-                  </div>
 
-                  <div className="mt-4 text-center px-1 flex-1">
-                    <p className="text-[0.65rem] leading-snug text-[var(--ink-muted)]">
-                      {choiceObj?.helper || "Empty Socket"}
-                    </p>
-                  </div>
+                      if (!currentChoiceId) {
+                        return;
+                      }
+
+                      setBlockSelection((previous) => {
+                        const next = [...previous];
+                        next[index] = "";
+                        return next;
+                      });
+                      setSelectedBlockChoice(currentChoiceId);
+                    }}
+                    className={[
+                      "mt-3 flex min-h-28 w-full items-center justify-center rounded border border-dashed px-3 py-4 text-center transition",
+                      choice
+                        ? "border-[#d4a843] bg-[#131d2f] text-[#d4a843]"
+                        : selectedBlockChoice
+                          ? "border-[#d4a843] bg-[#10192a] text-[#d4a843]"
+                          : "border-[#1a2840] bg-[#0d1625] text-[#5a6a7a]",
+                    ].join(" ")}
+                  >
+                      <span className="font-mono text-xs uppercase tracking-[0.16em]">
+                        {choice ? choice.label : "[ EMPTY SLOT ]"}
+                      </span>
+                  </button>
                 </div>
               );
             })}
@@ -1113,238 +1421,258 @@ export function GameplayExperience({
         </div>
 
         {blockFeedback.length > 0 ? (
-          <div className="rounded-[24px] border border-amber-500/30 bg-amber-500/12 p-5">
-            <p className="text-sm font-semibold text-amber-100">System Error Detected</p>
-            <ul className="mt-3 space-y-2 text-sm text-amber-100 font-mono">
+          <div className="terminal-panel border-[#3b2311] bg-[#140c08]">
+            <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#d4a843]">
+              {"// PIPELINE DIAGNOSTIC"}
+            </p>
+            <div className="mt-4 space-y-2 font-mono text-sm leading-7 text-[#e8b66c]">
               {blockFeedback.map((message) => (
-                <li key={message} className="flex items-start gap-2">
-                  <span className="mt-0.5 opacity-70">&gt;</span>
-                  <span>{message}</span>
-                </li>
+                <p key={message}>&gt; ERROR: {message}</p>
               ))}
-            </ul>
+            </div>
           </div>
         ) : null}
-        
-        <div className="flex justify-end gap-3 pt-2">
-          {attempts >= 3 && !completedByLevel[currentLevelId] && (
+
+        <div className="flex flex-wrap justify-end gap-3">
+          {attempts >= 3 ? (
             <Button
               variant="secondary"
               onClick={handleSkipLevel}
-              className="border-amber-500 text-amber-500 hover:bg-amber-500/10"
+              className="rounded border border-[#624616] bg-transparent font-mono text-xs uppercase tracking-[0.16em] text-[#d4a843] hover:bg-[#2a1c08]"
             >
-              Show answer and continue
+              {"// BYPASS CHARLIE"}
             </Button>
-          )}
-          <Button onClick={submitBlockSequence} className="font-mono uppercase tracking-widest text-sm px-8">
-            Deploy Sequence
+          ) : null}
+          <Button
+            onClick={submitBlockSequence}
+            className="rounded border border-[#1a2840] bg-[#162134] font-mono text-xs uppercase tracking-[0.2em] text-[#d4a843] shadow-none hover:bg-[#1d2a43]"
+          >
+            {"// COMMIT CONFIGURATION"}
           </Button>
         </div>
       </div>
     );
   }
 
-  const revealedHints = currentLevel.hints.slice(0, revealedHintCount);
+  function renderTransitionBeat() {
+    if (!completedByLevel[currentLevelId] || currentLevelId === "block-cipher") {
+      return null;
+    }
+
+    const beat = transitionBeats[currentLevelId];
+
+    return (
+      <div className="terminal-panel space-y-3">
+        {beat.lines.map((line, index) => (
+          <p
+            key={line}
+            className="typewriter-line font-mono text-sm uppercase tracking-[0.18em] text-[#d4a843]"
+            style={{ animationDelay: `${index * 120}ms` }}
+          >
+            {line}
+          </p>
+        ))}
+        <button
+          type="button"
+          onClick={() => continueAfterLevel(currentLevelId)}
+          className="mt-2 rounded border border-[#1a2840] bg-[#10192a] px-4 py-3 font-mono text-xs uppercase tracking-[0.2em] text-[#d4a843] transition hover:border-[#d4a843] hover:text-[#f2c96a]"
+        >
+          {beat.action}
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="mx-auto grid w-full max-w-[98rem] gap-4 lg:max-h-[calc(100vh-10.5rem)] lg:grid-cols-[16rem_minmax(0,1fr)_20rem] lg:items-start">
-      {toast ? (
-        <div className="pointer-events-none fixed right-4 top-4 z-50 w-[min(26rem,calc(100vw-2rem))]">
-          <div
-            className={[
-              "rounded-2xl border px-4 py-3 text-sm shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur",
-              toast.tone === "error"
-                ? "border-amber-500/35 bg-amber-500/16 text-amber-50"
-                : "border-sky-500/35 bg-sky-500/16 text-sky-50",
-            ].join(" ")}
-          >
-            {toast.message}
+    <div className="terminal-canvas mx-auto w-full max-w-[98rem] rounded-[18px] border border-[#1a2840] p-4 shadow-[0_24px_80px_rgba(0,0,0,0.4)]">
+      {showIntro ? (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-[rgba(4,8,14,0.88)] p-4">
+          <div className="terminal-panel max-w-3xl">
+            {bootSequenceLines.map((line, index) => (
+              <p
+                key={`${line}-${index}`}
+                className={[
+                  "typewriter-line font-mono text-sm tracking-[0.16em] text-[#d4a843]",
+                  line === "" ? "h-4" : "",
+                ].join(" ")}
+                style={{ animationDelay: `${index * 120}ms` }}
+              >
+                {line || " "}
+              </p>
+            ))}
+            <button
+              type="button"
+              onClick={() => {
+                setShowIntro(false);
+                setStatusTone("info");
+                setStatusLine(levelReadyStatuses["caesar-cipher"]);
+              }}
+              className="mt-8 rounded border border-[#1a2840] bg-[#10192a] px-4 py-3 font-mono text-xs uppercase tracking-[0.2em] text-[#d4a843] transition hover:border-[#d4a843] hover:text-[#f2c96a]"
+            >
+              {"// [BEGIN MISSION]"}
+            </button>
           </div>
         </div>
       ) : null}
 
-      {showIntro ? (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <Card className="mx-4 max-w-md p-6 text-center sm:p-8">
-            <p className="font-mono text-xs font-bold uppercase tracking-[0.3em] text-[var(--accent-strong)]">
-              Welcome, Agent
-            </p>
-            <h2 className="mt-3 text-2xl font-bold text-[var(--ink)]">
-              Mission Briefing
-            </h2>
-            <div className="mt-5 space-y-3 text-left text-sm leading-6 text-[var(--ink-muted)]">
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--accent)]/20 text-[0.6rem] font-bold text-[var(--accent-strong)]">
-                  L
-                </span>
-                <span>Your <strong className="text-[var(--ink)]">mission briefing</strong> is on the left.</span>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--accent)]/20 text-[0.6rem] font-bold text-[var(--accent-strong)]">
-                  C
-                </span>
-                <span>Solve each <strong className="text-[var(--ink)]">puzzle</strong> in the center.</span>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--accent)]/20 text-[0.6rem] font-bold text-[var(--accent-strong)]">
-                  R
-                </span>
-                <span><strong className="text-[var(--ink)]">Hints</strong> and <strong className="text-[var(--ink)]">intel</strong> unlock on the right as you work.</span>
-              </div>
-            </div>
-            <p className="mt-4 text-xs text-[var(--ink-muted)]">
-              You&apos;ll tackle 3 levels. Good luck.
-            </p>
-            <Button
-              onClick={() => setShowIntro(false)}
-              className="mt-6 w-full font-mono text-sm uppercase tracking-widest"
-            >
-              Begin Mission
-            </Button>
-          </Card>
+      <div className="terminal-panel mb-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <p className="font-mono text-sm uppercase tracking-[0.22em] text-[#d4a843]">
+            {`SIGINT STATION // ANALYST: CIPHER // TRANSMISSION: ${currentLevelIndex + 1}/3`}
+          </p>
+          <p
+            className={[
+              "mt-2 font-mono text-xs uppercase tracking-[0.16em]",
+              statusTone === "success"
+                ? "text-[#4ade80]"
+                : statusTone === "error"
+                  ? "text-[#ef4444]"
+                  : "text-[#5a6a7a]",
+            ].join(" ")}
+          >
+            {statusLine}
+          </p>
         </div>
-      ) : null}
+        <div className="flex items-center gap-4">
+          <StatusWaveform state={waveformState} />
+          <p
+            className={[
+              "font-mono text-xs uppercase tracking-[0.18em]",
+              waveformState === "success"
+                ? "text-[#4ade80]"
+                : waveformState === "error"
+                  ? "text-[#ef4444]"
+                  : "text-[#d4a843]",
+            ].join(" ")}
+          >
+            {waveformState === "success"
+              ? "// SIGNAL CLEAR"
+              : waveformState === "error"
+                ? "// SIGNAL DEGRADED"
+                : "// INTERCEPT LOCKED"}
+          </p>
+        </div>
+      </div>
 
-      {/* ── Left Sidebar: Mission + Stats ── */}
-      <div className="space-y-4 lg:h-[calc(100vh-10.5rem)] lg:overflow-auto lg:pr-1">
-        <Card className="p-5">
-          <div className="space-y-3">
-            <p className="font-mono text-xs font-bold uppercase tracking-[0.3em] text-[var(--accent-strong)]">
-              Mission
-            </p>
-            <h2 className="text-xl font-bold text-[var(--ink)] sm:text-2xl">
+      <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)_200px] lg:items-start">
+        <div className="space-y-4">
+          <div className="terminal-panel">
+          <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#5a6a7a]">
+              {"// Mission Briefing"}
+          </p>
+            <h2 className="mt-3 font-mono text-lg uppercase tracking-[0.14em] text-[#d4a843]">
               {currentLevel.title}
             </h2>
-            <p className="text-sm font-medium leading-6 text-[var(--ink-muted)]">
+            <p className="mt-4 font-mono text-sm leading-7 text-[#c3a257]">
               {currentLevel.mission}
             </p>
           </div>
-        </Card>
-        <Card className="p-4">
-          <div className="space-y-3 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="font-semibold text-[var(--ink-muted)]">Level</span>
-              <strong className="font-mono text-lg text-[var(--ink)]">
-                {currentLevelIndex + 1} / {levelOrder.length}
-              </strong>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="font-semibold text-[var(--ink-muted)]">Attempts</span>
-              <strong className="font-mono text-lg text-[var(--ink)]">{attempts}</strong>
-            </div>
-          </div>
-        </Card>
-        {statusMessage ? (
-          <Card
-            className={[
-              "p-4",
-              statusTone === "success"
-                ? "border-emerald-500/30 bg-emerald-500/12"
-                : statusTone === "error"
-                  ? "border-red-400/30 bg-red-400/12"
-                  : "border-sky-500/30 bg-sky-500/12",
-            ].join(" ")}
-          >
-            <p
-              className={[
-                "text-sm font-semibold leading-6",
-                statusTone === "success"
-                  ? "text-emerald-100"
-                  : statusTone === "error"
-                    ? "text-red-100"
-                    : "text-sky-100",
-              ].join(" ")}
-            >
-              {statusMessage}
+
+          <div className="terminal-panel">
+            <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#5a6a7a]">
+              {"// Signal Stats"}
             </p>
-          </Card>
-        ) : null}
-      </div>
-
-      {/* ── Center: Game Area ── */}
-      <Card className="p-5 sm:p-6 lg:h-[calc(100vh-10.5rem)] lg:min-h-0">
-        <div className="space-y-5 lg:flex lg:h-full lg:flex-col lg:space-y-4">
-          <div className="lg:min-h-0 lg:flex-1 lg:overflow-auto lg:pr-1">
-            {currentLevelId === "caesar-cipher"
-              ? renderCaesarLevel()
-              : currentLevelId === "xor-stream"
-                ? renderXorLevel()
-                : renderBlockCipherLevel()}
+            <div className="mt-4 space-y-3 font-mono text-sm text-[#d4a843]">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[#5a6a7a]">Transmission</span>
+                <span>{currentLevelIndex + 1} / {levelOrder.length}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[#5a6a7a]">Decrypt attempts</span>
+                <span>{attempts}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[#5a6a7a]">Intel requests</span>
+                <span>{revealedHintCount}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[#5a6a7a]">Signal Log</span>
+                <span>{unlockedCodexEntries.length} / 3</span>
+              </div>
+            </div>
           </div>
+        </div>
 
-          {completedByLevel[currentLevelId] ? (
-            <div className="flex justify-end">
-              {readyForPosttest ? (
-                <Button onClick={() => onComplete(Array.from(skippedLevels))}>Continue to post-test</Button>
-              ) : (
-                <Button onClick={() => continueAfterLevel(currentLevelId)}>
-                  Continue to next level
-                </Button>
-              )}
+        <div className="space-y-4">
+          {currentLevelId === "caesar-cipher"
+            ? renderCaesarLevel()
+            : currentLevelId === "xor-stream"
+              ? renderXorLevel()
+              : renderBlockCipherLevel()}
+
+          {renderTransitionBeat()}
+
+          {completedByLevel[currentLevelId] && currentLevelId === "block-cipher" ? (
+            <div className="terminal-panel">
+              <button
+                type="button"
+                onClick={() => onComplete(Array.from(skippedLevels))}
+                className="rounded border border-[#1a2840] bg-[#10192a] px-4 py-3 font-mono text-xs uppercase tracking-[0.2em] text-[#d4a843] transition hover:border-[#d4a843] hover:text-[#f2c96a]"
+              >
+                {"// [PRESS ENTER TO OPEN POST-MISSION DEBRIEF]"}
+              </button>
             </div>
           ) : null}
         </div>
-      </Card>
 
-      {/* ── Right Sidebar: Hints + Codex ── */}
-      <div className="space-y-4 lg:h-[calc(100vh-10.5rem)] lg:overflow-auto lg:pr-1">
-        <Card className={`p-5 lg:p-6 ${hintCardGlow ? "hint-card-glow" : ""}`}>
-          <div className="space-y-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <p className="font-mono text-sm font-semibold uppercase tracking-[0.28em] text-[var(--accent-strong)]">
-                  Hints
+        <div className="space-y-4">
+          <div className="terminal-panel space-y-4">
+            <div>
+              <div className="flex items-center justify-between gap-3">
+                <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#5a6a7a]">
+                  {"// Intel"}
                 </p>
                 {unlockedHintCount > revealedHintCount ? (
-                  <span className="relative flex h-2.5 w-2.5">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--accent)] opacity-75" />
-                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[var(--accent-strong)]" />
+                  <span className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-[#4ade80]">
+                    {"// NEW"}
                   </span>
                 ) : null}
               </div>
-              <p className="text-sm font-medium leading-6 text-[var(--ink-muted)]">
-                Stuck? Hints unlock automatically as you work. Keep trying or wait 30 seconds.
+              <p className="mt-3 font-mono text-sm leading-7 text-[#5a6a7a]">
+                {"// Intel unlocks automatically as you work. Review it only when you need it."}
               </p>
             </div>
+
             <Button
               variant="secondary"
               onClick={handleRevealHint}
               disabled={revealedHintCount >= unlockedHintCount}
               fullWidth
+              className="rounded border border-[#1a2840] bg-[#10192a] font-mono text-xs uppercase tracking-[0.18em] text-[#d4a843] hover:border-[#d4a843] hover:bg-[#10192a] hover:text-[#f2c96a]"
             >
               {unlockedHintCount === 0
-                ? "No hints yet"
+                ? "// NO INTEL AVAILABLE"
                 : revealedHintCount < unlockedHintCount
-                  ? `New hint available!`
-                  : "All hints opened"}
+                  ? "// NEW INTEL RECEIVED"
+                  : "// ALL INTEL REVIEWED"}
             </Button>
+
             {revealedHints.length > 0 ? (
               <div className="space-y-3">
                 {revealedHints.map((hint, index) => (
-                  <div
-                    key={hint}
-                    className="rounded-2xl border border-[var(--border)] bg-[var(--card-strong)] px-4 py-3 text-base font-medium leading-7 text-[var(--ink)]"
-                  >
-                    <span className="font-bold text-[var(--accent-strong)]">Hint {index + 1}.</span>{" "}
-                    {hint}
+                  <div key={hint} className="rounded border border-[#1a2840] bg-[#09111c] px-4 py-3 font-mono text-sm leading-7 text-[#c3a257]">
+                    <p className="text-xs uppercase tracking-[0.18em] text-[#4ade80]">
+                      {`// INTEL ${index + 1}`}
+                    </p>
+                    <p className="mt-2">&gt; {hint}</p>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="rounded-2xl border border-dashed border-[var(--border-strong)] bg-[var(--card-soft)] px-4 py-3 text-sm font-medium leading-6 text-[var(--ink-muted)]">
-                Keep working on the puzzle — hints will appear here.
+              <div className="rounded border border-dashed border-[#1a2840] bg-[#09111c] px-4 py-3 font-mono text-sm leading-7 text-[#5a6a7a]">
+                {"// NO INTEL OPENED"}
               </div>
             )}
           </div>
-        </Card>
 
-        <CodexPanel
-          activeEntryId={activeCodexEntry}
-          isOpen={codexOpen}
-          onSelectEntry={handleCodexEntrySelect}
-          onToggle={handleCodexToggle}
-          unlockedEntries={unlockedCodexEntries}
-        />
+          <CodexPanel
+            activeEntryId={activeCodexEntry}
+            isOpen={codexOpen}
+            onSelectEntry={handleCodexEntrySelect}
+            onToggle={handleCodexToggle}
+            unlockedEntries={unlockedCodexEntries}
+          />
+        </div>
       </div>
     </div>
   );

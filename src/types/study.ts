@@ -29,6 +29,7 @@ export const studyEventNames = [
   "attempt_submitted",
   "attempt_failed",
   "attempt_succeeded",
+  "channel_configured",
   "level_completed",
   "level_skipped",
   "posttest_started",

@@ -22,21 +22,27 @@ export function CodexPanel({
   const activeEntryUnlocked = unlockedEntries.includes(activeEntryId);
 
   return (
-    <aside className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="font-mono text-sm font-semibold uppercase tracking-[0.3em] text-[var(--accent-strong)]">
-          Codex
-        </p>
+    <aside className="terminal-panel space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="font-mono text-[0.7rem] uppercase tracking-[0.28em] text-[#5a6a7a]">
+            {"// Signal Log"}
+          </p>
+          <p className="mt-1 font-mono text-sm text-[#d4a843]">
+            {unlockedEntries.length}/3 entries unlocked
+          </p>
+        </div>
         <button
           type="button"
           onClick={onToggle}
-          className="rounded-full border border-[var(--border-strong)] bg-[var(--card-strong)] px-4 py-2 text-sm font-semibold uppercase tracking-[0.18em] text-[var(--ink)] transition hover:bg-[var(--card-soft)]"
+          className="rounded border border-[#1a2840] bg-[#10192a] px-3 py-2 font-mono text-xs uppercase tracking-[0.18em] text-[#d4a843] transition hover:border-[#d4a843] hover:text-[#f2c96a]"
         >
           {isOpen ? "Hide" : "Open"}
         </button>
       </div>
+
       {isOpen ? (
-        <div className="space-y-4 rounded-[28px] border border-[var(--border)] bg-[var(--card)]/92 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur lg:p-6">
+        <div className="space-y-4">
           <div className="space-y-2">
             {Object.values(codexEntries).map((entry) => {
               const unlocked = unlockedEntries.includes(entry.id);
@@ -48,50 +54,64 @@ export function CodexPanel({
                   disabled={!unlocked}
                   onClick={() => onSelectEntry(entry.id)}
                   className={[
-                    "w-full rounded-2xl px-4 py-3 text-left text-base font-medium transition",
+                    "w-full rounded border px-3 py-2 text-left font-mono text-xs uppercase tracking-[0.16em] transition",
                     unlocked
                       ? activeEntryId === entry.id
-                        ? "bg-[var(--accent-strong)] text-white"
-                        : "bg-[var(--card-strong)] text-[var(--ink)] hover:bg-[var(--card-soft)]"
-                      : "cursor-not-allowed bg-[var(--card-soft)] text-[var(--ink-muted)] opacity-60",
+                        ? "border-[#d4a843] bg-[#182338] text-[#f2c96a]"
+                        : "border-[#1a2840] bg-[#0e1626] text-[#d4a843] hover:border-[#d4a843]"
+                      : "cursor-not-allowed border-[#1a2840] bg-[#0b1220] text-[#5a6a7a] opacity-70",
                   ].join(" ")}
                 >
-                  {unlocked ? entry.title : `${entry.title} (Locked)`}
+                  {unlocked ? entry.title : `${entry.title} -- LOCKED`}
                 </button>
               );
             })}
           </div>
-          <div className="rounded-[22px] border border-[var(--border)] bg-[var(--card-soft)] p-4">
-            <h3 className="text-xl font-semibold text-[var(--ink)]">{activeEntry.title}</h3>
+
+          <div className="rounded border border-[#1a2840] bg-[#09111c] p-4 font-mono">
+            <p className="text-xs uppercase tracking-[0.2em] text-[#4ade80]">{activeEntry.title}</p>
             {activeEntryUnlocked ? (
-              <>
-                <p className="mt-2 text-base leading-7 text-[var(--ink)]">
-                  {activeEntry.summary}
-                </p>
-                <ul className="mt-4 space-y-2 text-base leading-7 text-[var(--ink)]">
-                  {activeEntry.bullets.map((bullet) => (
-                    <li key={bullet} className="rounded-2xl bg-[var(--card-strong)] px-3 py-2 font-medium">
-                      {bullet}
-                    </li>
-                  ))}
-                </ul>
-              </>
+              <div className="mt-4 space-y-4 text-sm leading-7 text-[#c3a257]">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-[#5a6a7a]">
+                    {"// Encoding Method"}
+                  </p>
+                  <p className="mt-2 text-[#d4a843]">{activeEntry.method}</p>
+                </div>
+
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-[#5a6a7a]">
+                    {"// Analysis"}
+                  </p>
+                  <div className="mt-2 space-y-2">
+                    {activeEntry.analysis.map((line) => (
+                      <p key={line}>&gt; {line}</p>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-[#5a6a7a]">
+                    {"// Note"}
+                  </p>
+                  <div className="mt-2 space-y-2">
+                    {activeEntry.note.map((line) => (
+                      <p key={line}>&gt; {line}</p>
+                    ))}
+                  </div>
+                </div>
+              </div>
             ) : (
-              <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
-                Each entry unlocks when you solve its matching level. Check back after completing a level.
+              <p className="mt-3 text-sm leading-6 text-[#5a6a7a]">
+                {"// ENTRY LOCKED -- decode the matching transmission to access this analyst note."}
               </p>
             )}
           </div>
         </div>
       ) : (
-        <div className="rounded-[24px] border border-[var(--border)] bg-[var(--card-soft)] p-4">
-          <p className="text-sm font-semibold text-[var(--ink)]">
-            {unlockedEntries.length}/3 entries unlocked
-          </p>
-          <p className="mt-1 text-xs leading-5 text-[var(--ink-muted)]">
-            Complete each level to unlock a concept summary. These entries explain the cryptography behind each puzzle.
-          </p>
-        </div>
+        <p className="font-mono text-sm leading-6 text-[#5a6a7a]">
+          {"// New entries unlock after a transmission is resolved. Open the panel to review recovered analyst notes."}
+        </p>
       )}
     </aside>
   );
