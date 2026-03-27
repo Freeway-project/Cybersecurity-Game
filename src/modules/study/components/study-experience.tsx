@@ -493,7 +493,9 @@ export function StudyExperience({ initialName }: StudyExperienceProps) {
           <div className="space-y-6">
             <div>
               <p className="font-mono text-xs uppercase tracking-[0.3em] text-[var(--accent-strong)]">
-                {currentStep === "pretest" ? "Baseline assessment" : "Post-use assessment"}
+                {currentStep === "pretest"
+                  ? "// PRE-MISSION KNOWLEDGE CHECK"
+                  : "// POST-MISSION DEBRIEF"}
               </p>
               <h2 className="mt-3 text-2xl font-semibold text-[var(--ink)]">
                 {currentStep === "pretest"

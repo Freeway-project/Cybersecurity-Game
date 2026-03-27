@@ -275,3 +275,124 @@ button {
   .xor-row-wrong { animation: none; }
   .hint-card-glow { animation: none; }
 }
+
+/* Terminal theme — scoped to game levels only */
+.terminal-canvas {
+  background: #080d14;
+  color: #d4a843;
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
+  position: relative;
+}
+
+/* Scanline overlay — subtle, not distracting */
+.terminal-canvas::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Waveform status indicator */
+@keyframes waveform-active {
+  0%, 100% { stroke-dashoffset: 0; }
+  50% { stroke-dashoffset: 20; }
+}
+
+@keyframes waveform-success {
+  0% { stroke: #ef4444; }
+  100% { stroke: #4ade80; }
+}
+
+/* Typewriter reveal */
+@keyframes typewriter {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+.typewriter-line {
+  display: block;
+  width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  animation: typewriter 0.4s steps(40) forwards;
+}
+
+/* Phosphor text glow — use sparingly on key readouts */
+.phosphor-amber { color: #d4a843; }
+.phosphor-green  { color: #4ade80; }
+.phosphor-dim    { color: #5a6a7a; }
+.phosphor-alert  { color: #ef4444; }
+
+/* Terminal border style */
+.terminal-panel {
+  border: 1px solid #1a2840;
+  background: #0a1020;
+  border-radius: 4px;
+  padding: 1.25rem;
+  position: relative;
+  z-index: 1;
+}
+
+.waveform-path {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 120 18;
+}
+
+.waveform-path--active {
+  stroke: #d4a843;
+  animation: waveform-active 1.8s linear infinite;
+}
+
+.waveform-path--error {
+  stroke: #ef4444;
+}
+
+.waveform-path--success {
+  stroke: #4ade80;
+  animation:
+    waveform-success 220ms ease forwards,
+    waveform-active 2.2s linear infinite;
+}
+
+@keyframes terminal-static-burst {
+  0% {
+    opacity: 0.8;
+    transform: translateX(-8%) scaleX(1.08);
+  }
+  50% {
+    opacity: 0.24;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(6%) scaleX(0.98);
+  }
+}
+
+.terminal-static-burst {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, transparent, rgba(212, 168, 67, 0.16), transparent),
+    repeating-linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.06) 0,
+      rgba(255, 255, 255, 0.06) 2px,
+      transparent 2px,
+      transparent 6px
+    );
+  mix-blend-mode: screen;
+  pointer-events: none;
+  animation: terminal-static-burst 480ms ease-out forwards;
+}

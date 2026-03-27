@@ -24,9 +24,9 @@ export interface SurveyItem {
 }
 
 export const studyCopy = {
-  title: "Cryptography Mission Pilot",
+  title: "Signal Interceptor",
   subtitle:
-    "A short research pilot on how CS students learn introductory cryptography concepts.",
+    "A narrative research game about intercepting hostile transmissions and reconstructing unreadable signals.",
   consentHeading: "Consent and study conditions",
   consentBullets: [
     "Participation is voluntary and not graded.",
@@ -36,7 +36,7 @@ export const studyCopy = {
   sessionOutline: [
     "Consent and setup",
     "Three-question pre-test",
-    "Three cryptography micro-levels",
+    "Three signal intercept levels",
     "Three-question post-test",
     "Short perception survey",
   ],

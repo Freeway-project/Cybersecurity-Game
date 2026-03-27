@@ -3,8 +3,9 @@ import type { CodexEntryId, LevelId } from "@/types/study";
 export interface CodexEntry {
   id: CodexEntryId;
   title: string;
-  summary: string;
-  bullets: string[];
+  method: string;
+  analysis: string[];
+  note: string[];
 }
 
 export interface CaesarLevelConfig {
@@ -64,25 +65,26 @@ export const levelOrder: LevelId[] = [
 
 export const caesarLevel: CaesarLevelConfig = {
   id: "caesar-cipher",
-  title: "Level 1: Caesar Cipher",
+  title: "Transmission Alpha",
   mission:
-    "The spy intercepts a short coded message from an enemy contact. Adjust the Caesar shift until the hidden meeting point becomes readable.",
-  ciphertext: "PHHW DW WKH GRFN",
+    "Alpha channel arrived encoded. Sweep the frequency dial until the intercept resolves and the source traffic aligns into readable text.",
+  ciphertext: "PHHW DW WKH GRFN -- PLGQLJKW\nEORRG PRRQ ULVHV WRPRUURZ",
   targetShift: 3,
-  plaintext: "MEET AT THE DOCK",
-  successMessage: "Decoded. The message reveals the meeting point: the dock.",
+  plaintext: "MEET AT THE DOCK -- MIDNIGHT\nBLOOD MOON RISES TOMORROW",
+  successMessage:
+    "Transmission Alpha decrypted. Embedded coordinates and the word RENDEZVOUS have been recovered.",
   hints: [
-    "This message may only be shifted by a small amount.",
-    "Try moving the letters backward instead of forward.",
-    "A common shift in Caesar examples is 3.",
+    "The shift value is likely small. Start in the single digits.",
+    "All visible intercepts come from the same source, so one key should clean up every message.",
+    "A fixed alphabetic shift of 3 resolves the Alpha channel.",
   ],
 };
 
 export const xorLevel: XorLevelConfig = {
   id: "xor-stream",
-  title: "Level 2: Repair the Scrambled Transmission",
+  title: "Transmission Bravo",
   mission:
-    "A stolen briefing is scrambled. Rebuild the XOR rule first, then use the same logic to recover the original signal.",
+    "Bravo channel is scrambled. Calibrate the bitwise decode rule first, then apply the same transform to recover the intercepted signal.",
   rulePairs: [
     { left: "1", right: "1", output: "0" },
     { left: "0", right: "1", output: "1" },
@@ -93,25 +95,25 @@ export const xorLevel: XorLevelConfig = {
   recoveryKeyBits: "1100",
   recoveryPlaintextBits: "1010",
   successMessage:
-    "Recovered. XOR with the same key restored the original signal and the briefing channel is readable again.",
+    "Transmission Bravo decrypted. The transfer window and confirmation phrase are now readable.",
   hints: [
-    "Start with the core rule: when two bits are the same, the output is 0.",
-    "When the two bits are different, the output is 1.",
-    "Use that same rule on every column. 0110 XOR 1100 gives 1010.",
+    "Start with the core XOR rule: matching bits produce 0.",
+    "Different bits produce 1. Apply the same rule to every recovery column.",
+    "Use the calibrated rule straight across the row: 0110 XOR 1100 resolves to 1010.",
   ],
 };
 
 export const blockCipherLevel: BlockCipherLevelConfig = {
   id: "block-cipher",
-  title: "Level 3: Fix the Secure Encryption Setup",
+  title: "Transmission Charlie",
   mission:
-    "The secure channel failed. Rebuild the encryption flow by placing the cards in the right roles: input, starting helper, secret, encryption step, and output.",
+    "The final transmission is incoming over a properly configured encrypted channel. Configure our outbound encryption pipeline correctly before the response window closes or the adversary will see our reply in plaintext.",
   slotLabels: [
-    "Slot 1: Data going in",
-    "Slot 2: Starting helper value",
-    "Slot 3: Secret used by encryption",
-    "Slot 4: Encryption action",
-    "Slot 5: Data coming out",
+    "Input Hopper",
+    "Mixing Chamber",
+    "Key Lock",
+    "Processor",
+    "Output Tank",
   ],
   correctSequence: [
     "plaintext",
@@ -123,36 +125,36 @@ export const blockCipherLevel: BlockCipherLevelConfig = {
   choices: [
     {
       id: "plaintext",
-      label: "Plaintext",
-      helper: "The original message chunk before encryption.",
+      label: "PLAINTEXT",
+      helper: "Source data entering the pipeline.",
     },
     {
       id: "iv",
       label: "IV",
-      helper: "The starting helper value that makes repeated encryption less predictable.",
+      helper: "Fresh randomiser mixed in before encryption.",
     },
     {
       id: "key",
-      label: "Key",
-      helper: "The secret value used by the cipher.",
+      label: "KEY",
+      helper: "Secret material that drives the cipher.",
     },
     {
       id: "encrypt",
-      label: "Encrypt",
-      helper: "The action that transforms the input into protected output.",
+      label: "ENCRYPT",
+      helper: "Processing stage that transforms the blocks.",
     },
     {
       id: "ciphertext",
-      label: "Ciphertext",
-      helper: "The scrambled block that comes out of the cipher.",
+      label: "CIPHERTEXT",
+      helper: "Protected output leaving the network.",
     },
   ],
   successMessage:
-    "Flow restored. The channel is secure again, and the final Codex entry is now unlocked.",
+    "Pipeline stabilised. The repeated pattern disappeared from the attacker intercept.",
   hints: [
-    "Plaintext goes in first, and ciphertext comes out last.",
-    "The key is the secret. The IV is only the starting helper value.",
-    "One clean order is Plaintext -> IV -> Key -> Encrypt -> Ciphertext.",
+    "Plaintext enters first and ciphertext exits last.",
+    "The IV randomises the first block. It is not the secret key.",
+    "One valid flow is Plaintext -> IV -> Key -> Encrypt -> Ciphertext.",
   ],
 };
 
@@ -165,32 +167,41 @@ export const gameplayLevels: GameplayLevelConfig[] = [
 export const codexEntries: Record<CodexEntryId, CodexEntry> = {
   "caesar-cipher": {
     id: "caesar-cipher",
-    title: "Codex: Caesar Cipher",
-    summary: "A Caesar cipher rotates every letter by the same fixed amount.",
-    bullets: [
-      "A Caesar cipher shifts every letter by the same number.",
-      "To decrypt, shift letters back by the same amount.",
-      "It is a simple example of a substitution cipher.",
+    title: "Signal Log -- Entry 1",
+    method: "ALPHABETIC SHIFT CIPHER",
+    analysis: [
+      "The Alpha channel used a fixed-offset letter substitution.",
+      "Every letter in the plaintext was shifted the same number of positions forward in the alphabet. The shift value was the key.",
+    ],
+    note: [
+      "This method is trivially broken by frequency analysis or brute force.",
+      "All 26 possible shifts can be tested in seconds. Modern use: none. Historical use: common pre-19th century.",
     ],
   },
   "xor-stream": {
     id: "xor-stream",
-    title: "Codex: XOR / Stream Cipher",
-    summary: "XOR outputs 1 for difference and 0 for a match, which is why the same key can scramble and then restore a signal.",
-    bullets: [
-      "XOR gives 0 when two bits are the same and 1 when they are different.",
-      "Applying XOR with the same key a second time restores the original bits.",
-      "The values still need to line up position by position for the result to make sense.",
+    title: "Signal Log -- Entry 2",
+    method: "BITWISE XOR WITH KEY STREAM",
+    analysis: [
+      "The Bravo channel applied an XOR operation between the plaintext bits and a repeating key stream.",
+      "XOR is invertible. Applying the same key to the ciphertext recovers the plaintext.",
+    ],
+    note: [
+      "XOR is the foundation of stream ciphers and block cipher modes.",
+      "The weakness here was key reuse. If the key stream repeats or is known, the cipher provides no security.",
     ],
   },
   "block-cipher": {
     id: "block-cipher",
-    title: "Codex: Block Cipher and IV",
-    summary: "A block cipher works on chunks of data, and the key and IV do different jobs in the process.",
-    bullets: [
-      "A block cipher encrypts fixed-size chunks of data instead of one letter at a time.",
-      "The key is the secret value used for encryption.",
-      "The IV is a starting helper value, not the secret key.",
+    title: "Signal Log -- Entry 3",
+    method: "BLOCK CIPHER, CBC MODE",
+    analysis: [
+      "The Charlie channel used a block cipher in CBC mode.",
+      "The plaintext is split into fixed-size blocks. Each block is XORed with the previous ciphertext block, or the IV for the first block, before encryption with the key.",
+    ],
+    note: [
+      "The IV ensures identical plaintexts produce different ciphertexts.",
+      "The key is secret; the IV is not. Confusing the two breaks the scheme.",
     ],
   },
 };

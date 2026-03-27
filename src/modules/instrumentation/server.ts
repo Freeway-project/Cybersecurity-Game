@@ -26,7 +26,9 @@ const eventSchema = z.object({
     "attempt_submitted",
     "attempt_failed",
     "attempt_succeeded",
+    "channel_configured",
     "level_completed",
+    "level_skipped",
     "posttest_started",
     "posttest_submitted",
     "survey_started",
@@ -111,4 +113,3 @@ export async function logStudyEvent(
 
   await db.collection<StudyEventRecord>("events").insertOne(eventRecord);
 }
-

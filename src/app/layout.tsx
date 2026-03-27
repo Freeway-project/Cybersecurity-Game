@@ -5,9 +5,9 @@ import { VercelAnalytics } from "@/components/analytics/vercel-analytics";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Cryptography Mission Pilot",
+  title: "Signal Interceptor",
   description:
-    "A modular browser-based pilot for cryptography education research and study instrumentation.",
+    "A browser-based signals intelligence game for cryptography education research and study instrumentation.",
 };
 
 export default function RootLayout({
