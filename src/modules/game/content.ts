@@ -107,13 +107,13 @@ export const blockCipherLevel: BlockCipherLevelConfig = {
   id: "block-cipher",
   title: "Transmission Charlie",
   mission:
-    "Charlie channel is live. Configure the outbound encryption pipeline in the correct order before the response window closes.",
+    "The final transmission is incoming over a properly configured encrypted channel. Configure our outbound encryption pipeline correctly before the response window closes or the adversary will see our reply in plaintext.",
   slotLabels: [
-    "SLOT 1",
-    "SLOT 2",
-    "SLOT 3",
-    "SLOT 4",
-    "SLOT 5",
+    "Input Hopper",
+    "Mixing Chamber",
+    "Key Lock",
+    "Processor",
+    "Output Tank",
   ],
   correctSequence: [
     "plaintext",
@@ -125,36 +125,36 @@ export const blockCipherLevel: BlockCipherLevelConfig = {
   choices: [
     {
       id: "plaintext",
-      label: "Plaintext",
-      helper: "Original response data before any encryption is applied.",
+      label: "PLAINTEXT",
+      helper: "Source data entering the pipeline.",
     },
     {
       id: "iv",
       label: "IV",
-      helper: "Starting value used before encryption so repeated messages do not match.",
+      helper: "Fresh randomiser mixed in before encryption.",
     },
     {
       id: "key",
-      label: "Key",
-      helper: "Secret value used by the cipher. This must stay distinct from the IV.",
+      label: "KEY",
+      helper: "Secret material that drives the cipher.",
     },
     {
       id: "encrypt",
-      label: "Encrypt",
-      helper: "Processing stage that transforms protected input into encrypted output.",
+      label: "ENCRYPT",
+      helper: "Processing stage that transforms the blocks.",
     },
     {
       id: "ciphertext",
-      label: "Ciphertext",
-      helper: "Protected output that leaves the channel after encryption.",
+      label: "CIPHERTEXT",
+      helper: "Protected output leaving the network.",
     },
   ],
   successMessage:
-    "Channel configured. Encryption is active and the full Signal Log dossier is available.",
+    "Pipeline stabilised. The repeated pattern disappeared from the attacker intercept.",
   hints: [
-    "Plaintext enters first. Ciphertext is the final output node.",
-    "The IV helps start the process. The key is the secret and is not interchangeable with it.",
-    "A correct pipeline is Plaintext -> IV -> Key -> Encrypt -> Ciphertext.",
+    "Plaintext enters first and ciphertext exits last.",
+    "The IV randomises the first block. It is not the secret key.",
+    "One valid flow is Plaintext -> IV -> Key -> Encrypt -> Ciphertext.",
   ],
 };
 

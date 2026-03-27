@@ -166,6 +166,147 @@ function StatusWaveform({ state }: { state: WaveformState }) {
   );
 }
 
+function PlaintextIcon({ size = 18, color = "#d4a843" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
+      <rect x="4" y="3" width="20" height="22" rx="2" stroke={color} strokeWidth="1.8" />
+      <line x1="8" y1="9" x2="20" y2="9" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="8" y1="13" x2="18" y2="13" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="8" y1="17" x2="16" y2="17" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IvIcon({ size = 18, color = "#d4a843" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
+      <circle cx="14" cy="14" r="9" stroke={color} strokeWidth="1.8" strokeDasharray="3 2" />
+      <circle cx="14" cy="14" r="4" fill={color} opacity="0.35" />
+      <path d="M14 5V2M14 26V23M5 14H2M26 14H23" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function KeyIcon({ size = 18, color = "#d4a843" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
+      <circle cx="10" cy="12" r="5" stroke={color} strokeWidth="1.8" />
+      <line x1="15" y1="12" x2="25" y2="12" stroke={color} strokeWidth="1.8" strokeLinecap="round" />
+      <line x1="22" y1="12" x2="22" y2="16" stroke={color} strokeWidth="1.8" strokeLinecap="round" />
+      <line x1="19" y1="12" x2="19" y2="15" stroke={color} strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function EncryptIcon({ size = 18, color = "#d4a843" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
+      <rect x="6" y="6" width="16" height="16" rx="3" stroke={color} strokeWidth="1.8" />
+      <path d="M11 14L13 16L17 12" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="14" cy="4" r="2" fill={color} opacity="0.45" />
+      <circle cx="14" cy="24" r="2" fill={color} opacity="0.45" />
+      <circle cx="4" cy="14" r="2" fill={color} opacity="0.45" />
+      <circle cx="24" cy="14" r="2" fill={color} opacity="0.45" />
+    </svg>
+  );
+}
+
+function CiphertextIcon({ size = 18, color = "#d4a843" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
+      <rect x="3" y="6" width="22" height="16" rx="2" stroke={color} strokeWidth="1.8" />
+      <path d="M7 12L10 15L7 18" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <line x1="13" y1="18" x2="21" y2="18" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+      <rect x="13" y="10" width="4" height="4" rx="1" fill={color} opacity="0.35" />
+      <rect x="19" y="10" width="3" height="4" rx="1" fill={color} opacity="0.22" />
+    </svg>
+  );
+}
+
+const blockIconComponents = {
+  plaintext: PlaintextIcon,
+  iv: IvIcon,
+  key: KeyIcon,
+  encrypt: EncryptIcon,
+  ciphertext: CiphertextIcon,
+} as const;
+
+function BlockStationShape({
+  type,
+  active,
+  index,
+}: {
+  type: "hopper" | "mixer" | "lock" | "processor" | "tank";
+  active: "empty" | "selected" | "placed";
+  index: number;
+}) {
+  const stroke =
+    active === "placed" ? "#4ade80" : active === "selected" ? "#f2c96a" : "#1a2840";
+  const fill =
+    active === "placed" ? "#0f1c18" : active === "selected" ? "#10192a" : "#09111c";
+
+  if (type === "hopper") {
+    return (
+      <svg viewBox="0 0 80 70" className="h-14 w-18" fill="none">
+        <path d="M15 12 H65 L54 32 L48 56 H32 L26 32 Z" stroke={stroke} strokeWidth="2" fill={fill} />
+        <text x="40" y="39" textAnchor="middle" fill={stroke} fontSize="10" fontFamily="IBM Plex Mono, monospace">
+          {index + 1}
+        </text>
+      </svg>
+    );
+  }
+
+  if (type === "mixer") {
+    return (
+      <svg viewBox="0 0 80 70" className="h-14 w-18" fill="none">
+        <ellipse cx="40" cy="16" rx="22" ry="7" stroke={stroke} strokeWidth="2" fill={fill} />
+        <path d="M18 16 V50 C18 55 28 59 40 59 C52 59 62 55 62 50 V16" stroke={stroke} strokeWidth="2" fill={fill} />
+        <path d="M40 24 V46 M33 30 L47 38 M47 30 L33 38" stroke={stroke} strokeWidth="1.5" opacity="0.6" />
+        <text x="40" y="42" textAnchor="middle" fill={stroke} fontSize="10" fontFamily="IBM Plex Mono, monospace">
+          {index + 1}
+        </text>
+      </svg>
+    );
+  }
+
+  if (type === "lock") {
+    return (
+      <svg viewBox="0 0 80 70" className="h-14 w-18" fill="none">
+        <rect x="18" y="22" width="44" height="36" rx="5" stroke={stroke} strokeWidth="2" fill={fill} />
+        <path d="M30 22 V14 C30 8 34 5 40 5 C46 5 50 8 50 14 V22" stroke={stroke} strokeWidth="2" />
+        <circle cx="40" cy="38" r="4" stroke={stroke} strokeWidth="1.5" fill="none" />
+        <line x1="40" y1="42" x2="40" y2="48" stroke={stroke} strokeWidth="1.5" />
+      </svg>
+    );
+  }
+
+  if (type === "processor") {
+    return (
+      <svg viewBox="0 0 80 70" className="h-14 w-18" fill="none">
+        <rect x="18" y="14" width="44" height="42" rx="5" stroke={stroke} strokeWidth="2" fill={fill} />
+        <rect x="12" y="28" width="8" height="4" rx="1" fill={stroke} opacity="0.5" />
+        <rect x="60" y="28" width="8" height="4" rx="1" fill={stroke} opacity="0.5" />
+        <rect x="12" y="38" width="8" height="4" rx="1" fill={stroke} opacity="0.5" />
+        <rect x="60" y="38" width="8" height="4" rx="1" fill={stroke} opacity="0.5" />
+        <path d="M36 22 L32 35 H38 L34 48" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M44 22 L40 35 H46 L42 48" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 80 70" className="h-14 w-18" fill="none">
+      <rect x="18" y="8" width="44" height="44" rx="5" stroke={stroke} strokeWidth="2" fill={fill} />
+      <line x1="18" y1="18" x2="62" y2="18" stroke={stroke} strokeWidth="1.5" opacity="0.5" />
+      <rect x="24" y="24" width="32" height="4" rx="1" fill={stroke} opacity="0.15" />
+      <rect x="24" y="32" width="32" height="4" rx="1" fill={stroke} opacity="0.25" />
+      <rect x="24" y="40" width="32" height="4" rx="1" fill={stroke} opacity="0.35" />
+      <line x1="40" y1="52" x2="40" y2="62" stroke={stroke} strokeWidth="2" />
+      <circle cx="40" cy="64" r="3" stroke={stroke} strokeWidth="1.5" fill="none" />
+    </svg>
+  );
+}
+
 interface FrequencyDialProps {
   value: number;
   onChange: (nextValue: number) => void;
@@ -740,6 +881,63 @@ export function GameplayExperience({
     );
   }
 
+  function handleInventorySelect(choiceId: string) {
+    if (blockSelection.includes(choiceId)) {
+      return;
+    }
+
+    markInteraction();
+    setSelectedBlockChoice((previous) => (previous === choiceId ? null : choiceId));
+  }
+
+  function handlePipelineSlotClick(index: number) {
+    markInteraction();
+
+    if (selectedBlockChoice) {
+      setBlockSelection((previous) => {
+        const next = [...previous];
+        const existingIndex = next.indexOf(selectedBlockChoice);
+
+        if (existingIndex !== -1) {
+          next[existingIndex] = "";
+        }
+
+        next[index] = selectedBlockChoice;
+        return next;
+      });
+      setSelectedBlockChoice(null);
+      return;
+    }
+
+    const currentChoiceId = blockSelection[index];
+    if (!currentChoiceId) {
+      return;
+    }
+
+    setBlockSelection((previous) => {
+      const next = [...previous];
+      next[index] = "";
+      return next;
+    });
+    setSelectedBlockChoice(currentChoiceId);
+  }
+
+  function handlePipelineSlotDrop(index: number, choiceId: string) {
+    markInteraction();
+    setBlockSelection((previous) => {
+      const next = [...previous];
+      const existingIndex = next.indexOf(choiceId);
+
+      if (existingIndex !== -1) {
+        next[existingIndex] = "";
+      }
+
+      next[index] = choiceId;
+      return next;
+    });
+    setSelectedBlockChoice(null);
+  }
+
   function submitCaesarGuess() {
     markInteraction();
     const attemptNo = getNextAttempt("caesar-cipher");
@@ -930,7 +1128,7 @@ export function GameplayExperience({
               {caesarLevel.plaintext}
             </pre>
             <div className="mt-5 space-y-2 font-mono text-sm leading-7 text-[#4ade80]">
-              <p>{"// COORDINATES EMBEDDED: 48.2082 N, 16.3738 E"}</p>
+              <p>{"// COORDINATES EMBEDDED: 48.2082°N 16.3738°E"}</p>
               <p>{"// KEYWORD RECOVERED: RENDEZVOUS"}</p>
               <p>{"// LOGGING TO SIGNAL LOG..."}</p>
             </div>
@@ -1274,149 +1472,141 @@ export function GameplayExperience({
           <div className="mt-3 space-y-1 font-mono text-sm leading-7 text-[#c3a257]">
             <p>{"// ADVERSARY TRANSMISSION: INCOMING"}</p>
             <p>{"// OUR RESPONSE WINDOW: CLOSING"}</p>
-            <p>{"// CONFIGURE OUTBOUND ENCRYPTION PIPELINE"}</p>
+            <p>{"// CONFIGURE OUTBOUND ENCRYPTION PIPELINE:"}</p>
+            <p>{"// MISCONFIGURATION WILL EXPOSE OUR RESPONSE"}</p>
           </div>
         </div>
 
-        <div className="terminal-panel">
-          <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#5a6a7a]">
-            {"// COMPONENT INVENTORY"}
-          </p>
-          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-            {blockCipherLevel.choices.map((choice) => {
-              const isSelected = selectedBlockChoice === choice.id;
-              const isUsed = blockSelection.includes(choice.id);
+        <div className="space-y-4">
+          <div className="terminal-panel">
+            <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#5a6a7a]">
+              {"// COMPONENT INVENTORY"}
+            </p>
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+              {["encrypt", "key", "ciphertext", "iv", "plaintext"].map((choiceId) => {
+                const choice = blockCipherLevel.choices.find((item) => item.id === choiceId);
+                if (!choice) {
+                  return null;
+                }
 
-              return (
-                <button
-                  key={choice.id}
-                  type="button"
-                  draggable={!isUsed}
-                  disabled={isUsed}
-                  onDragStart={(event) => {
-                    event.dataTransfer.setData("text/plain", choice.id);
-                  }}
-                  onClick={() => {
-                    if (isUsed) {
-                      return;
-                    }
+                const used = blockSelection.includes(choice.id);
+                const selected = selectedBlockChoice === choice.id;
+                const Icon = blockIconComponents[choice.id as keyof typeof blockIconComponents];
+                const iconColor = used ? "#5a6a7a" : selected ? "#f2c96a" : "#d4a843";
 
-                    markInteraction();
-                    setSelectedBlockChoice(isSelected ? null : choice.id);
-                  }}
-                  className={[
-                    "rounded border px-4 py-4 text-left transition",
-                    isUsed
-                      ? "cursor-not-allowed border-[#1a2840] bg-[#09111c] opacity-40"
-                      : isSelected
-                        ? "border-[#d4a843] bg-[#182338]"
-                        : "border-[#1a2840] bg-[#0d1625] hover:border-[#d4a843]",
-                  ].join(" ")}
-                >
-                  <p className="font-mono text-xs uppercase tracking-[0.18em] text-[#d4a843]">
-                    {choice.label}
-                  </p>
-                  <p className="mt-3 font-mono text-xs leading-6 text-[#5a6a7a]">
-                    {choice.helper}
-                  </p>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="terminal-panel">
-          <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#5a6a7a]">
-            {"// PIPELINE CONFIGURATION"}
-          </p>
-          <div className="mt-5 grid gap-3 xl:grid-cols-5">
-            {blockCipherLevel.slotLabels.map((slotLabel, index) => {
-              const currentChoiceId = blockSelection[index];
-              const choice = currentChoiceId
-                ? blockCipherLevel.choices.find((item) => item.id === currentChoiceId) ?? null
-                : null;
-
-              return (
-                <div
-                  key={slotLabel}
-                  className="rounded border border-[#1a2840] bg-[#09111c] p-3"
-                  onDragOver={(event) => {
-                    event.preventDefault();
-                  }}
-                  onDrop={(event) => {
-                    event.preventDefault();
-                    const draggedId = event.dataTransfer.getData("text/plain");
-
-                    if (!draggedId) {
-                      return;
-                    }
-
-                    markInteraction();
-                    setBlockSelection((previous) => {
-                      const next = [...previous];
-                      const existingIndex = next.indexOf(draggedId);
-
-                      if (existingIndex !== -1) {
-                        next[existingIndex] = "";
-                      }
-
-                      next[index] = draggedId;
-                      return next;
-                    });
-                    setSelectedBlockChoice(null);
-                  }}
-                >
-                  <p className="font-mono text-[0.68rem] uppercase tracking-[0.18em] text-[#5a6a7a]">
-                    {`// ${slotLabel}`}
-                  </p>
+                return (
                   <button
+                    key={choice.id}
                     type="button"
-                    onClick={() => {
-                      markInteraction();
-
-                      if (selectedBlockChoice) {
-                        setBlockSelection((previous) => {
-                          const next = [...previous];
-                          const existingIndex = next.indexOf(selectedBlockChoice);
-
-                          if (existingIndex !== -1) {
-                            next[existingIndex] = "";
-                          }
-
-                          next[index] = selectedBlockChoice;
-                          return next;
-                        });
-                        setSelectedBlockChoice(null);
-                        return;
-                      }
-
-                      if (!currentChoiceId) {
-                        return;
-                      }
-
-                      setBlockSelection((previous) => {
-                        const next = [...previous];
-                        next[index] = "";
-                        return next;
-                      });
-                      setSelectedBlockChoice(currentChoiceId);
+                    draggable={!used}
+                    disabled={used}
+                    onDragStart={(event) => {
+                      event.dataTransfer.setData("text/plain", choice.id);
+                      event.dataTransfer.effectAllowed = "move";
                     }}
+                    onClick={() => handleInventorySelect(choice.id)}
                     className={[
-                      "mt-3 flex min-h-28 w-full items-center justify-center rounded border border-dashed px-3 py-4 text-center transition",
-                      choice
-                        ? "border-[#d4a843] bg-[#131d2f] text-[#d4a843]"
-                        : selectedBlockChoice
-                          ? "border-[#d4a843] bg-[#10192a] text-[#d4a843]"
-                          : "border-[#1a2840] bg-[#0d1625] text-[#5a6a7a]",
+                      "rounded border px-4 py-4 text-left transition",
+                      used
+                        ? "cursor-not-allowed border-[#1a2840] bg-[#09111c] opacity-40"
+                        : selected
+                          ? "border-[#d4a843] bg-[#182338]"
+                          : "border-[#1a2840] bg-[#0d1625] hover:border-[#d4a843]",
                     ].join(" ")}
                   >
-                      <span className="font-mono text-xs uppercase tracking-[0.16em]">
-                        {choice ? choice.label : "[ EMPTY SLOT ]"}
-                      </span>
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded border border-[#1a2840] bg-[#09111c]">
+                        <Icon color={iconColor} />
+                      </div>
+                      <p className="font-mono text-xs uppercase tracking-[0.18em] text-[#d4a843]">
+                        {choice.label}
+                      </p>
+                    </div>
                   </button>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="terminal-panel">
+            <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#5a6a7a]">
+              {"// PIPELINE CONFIGURATION"}
+            </p>
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+              {blockCipherLevel.slotLabels.map((slotLabel, index) => {
+                const currentChoiceId = blockSelection[index];
+                const currentChoice = currentChoiceId
+                  ? blockCipherLevel.choices.find((item) => item.id === currentChoiceId) ?? null
+                  : null;
+                const Icon = currentChoiceId
+                  ? blockIconComponents[currentChoiceId as keyof typeof blockIconComponents]
+                  : null;
+                const stationTypes = ["hopper", "mixer", "lock", "processor", "tank"] as const;
+
+                return (
+                  <div
+                    key={slotLabel}
+                    className={[
+                      "rounded border bg-[#09111c] px-3 py-3 transition",
+                      currentChoice
+                        ? "border-[#4ade80]"
+                        : selectedBlockChoice
+                          ? "border-dashed border-[#d4a843]"
+                          : "border-[#1a2840]",
+                    ].join(" ")}
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                      event.dataTransfer.dropEffect = "move";
+                    }}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      const droppedId = event.dataTransfer.getData("text/plain");
+                      if (droppedId) {
+                        handlePipelineSlotDrop(index, droppedId);
+                      }
+                    }}
+                  >
+                    <p className="text-center font-mono text-[0.65rem] uppercase tracking-[0.16em] text-[#5a6a7a]">
+                      {`// ${slotLabel}`}
+                    </p>
+                    <div className="mt-3 flex justify-center">
+                      <BlockStationShape
+                        type={stationTypes[index]}
+                        active={currentChoice ? "placed" : selectedBlockChoice ? "selected" : "empty"}
+                        index={index}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handlePipelineSlotClick(index)}
+                      className={[
+                        "mt-3 flex min-h-16 w-full items-center justify-center rounded border border-dashed px-3 py-3 text-center transition",
+                        currentChoice
+                          ? "border-[#4ade80] bg-[#0f1c18] text-[#4ade80]"
+                          : selectedBlockChoice
+                            ? "border-[#d4a843] bg-[#10192a] text-[#d4a843]"
+                            : "border-[#1a2840] bg-[#0d1625] text-[#5a6a7a]",
+                      ].join(" ")}
+                    >
+                      {currentChoice && Icon ? (
+                        <span className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.14em]">
+                          <Icon size={16} color="#4ade80" />
+                          {currentChoice.label}
+                        </span>
+                      ) : selectedBlockChoice ? (
+                        <span className="font-mono text-xs uppercase tracking-[0.14em]">
+                          {"[ PLACE COMPONENT ]"}
+                        </span>
+                      ) : (
+                        <span className="font-mono text-xs uppercase tracking-[0.14em]">
+                          {"[ EMPTY SLOT ]"}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
 
@@ -1427,7 +1617,7 @@ export function GameplayExperience({
             </p>
             <div className="mt-4 space-y-2 font-mono text-sm leading-7 text-[#e8b66c]">
               {blockFeedback.map((message) => (
-                <p key={message}>&gt; ERROR: {message}</p>
+                <p key={message}>{`> ERROR: ${message}`}</p>
               ))}
             </div>
           </div>
@@ -1660,7 +1850,7 @@ export function GameplayExperience({
               </div>
             ) : (
               <div className="rounded border border-dashed border-[#1a2840] bg-[#09111c] px-4 py-3 font-mono text-sm leading-7 text-[#5a6a7a]">
-                {"// NO INTEL OPENED"}
+                {"// NO INTEL AVAILABLE"}
               </div>
             )}
           </div>
