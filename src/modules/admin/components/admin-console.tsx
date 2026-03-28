@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import type { ReactNode } from "react";
 
 import { likertLabels, priorExperienceLabels } from "@/config/study";
+import { levelOrder } from "@/modules/game/content";
 import { Card } from "@/components/ui/card";
 import type { AdminOverview, AdminParticipantReportRow } from "@/modules/admin/server";
 import type { LevelId, LikertScore } from "@/types/study";
@@ -47,6 +48,7 @@ const levelLabels: Record<LevelId, string> = {
   "soc-triage":         "SOC triage",
 };
 
+// All levels ever in the study — used for the per-participant breakdown table only
 const reportLevelIds: LevelId[] = [
   "caesar-cipher",
   "xor-stream",
@@ -57,6 +59,9 @@ const reportLevelIds: LevelId[] = [
   "dual-role-defender",
   "soc-triage",
 ];
+
+// Only the currently active levels — used for charts so they match the live game
+const chartLevelIds: LevelId[] = levelOrder;
 
 function formatText(value: string | null | undefined, fallback = "Not recorded") {
   return value && value.trim().length > 0 ? value : fallback;
@@ -526,7 +531,7 @@ export function AdminConsole({
       toneClass: "bg-gradient-to-t from-amber-500 to-yellow-300",
     },
   ];
-  const levelCompletionItems: HorizontalBarItem[] = reportLevelIds.map((levelId) => {
+  const levelCompletionItems: HorizontalBarItem[] = chartLevelIds.map((levelId) => {
     const value = percentage(
       rows.filter((row) => row.levels[levelId].completed).length,
       rows.length,
@@ -539,7 +544,7 @@ export function AdminConsole({
       toneClass: "bg-gradient-to-r from-emerald-500 to-emerald-300",
     };
   });
-  const levelDurationItems: VerticalBarItem[] = reportLevelIds.map((levelId) => {
+  const levelDurationItems: VerticalBarItem[] = chartLevelIds.map((levelId) => {
     const averageDuration = average(
       rows.flatMap((row) =>
         row.levels[levelId].durationMs === null ? [] : [row.levels[levelId].durationMs],
@@ -588,7 +593,7 @@ export function AdminConsole({
       toneClass: "bg-gradient-to-r from-amber-500 to-yellow-300",
     },
   ];
-  const levelEffortItems: DualMetricItem[] = reportLevelIds.map((levelId) => {
+  const levelEffortItems: DualMetricItem[] = chartLevelIds.map((levelId) => {
     const averageAttempts = average(rows.map((row) => row.levels[levelId].attemptsTotal));
     const averageHints = average(rows.map((row) => row.levels[levelId].hintsOpened));
 
