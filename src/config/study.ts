@@ -5,6 +5,11 @@ import type {
   StudyStep,
 } from "@/types/study";
 
+// Increment this when the game changes in a way that affects data comparability.
+// v1/v2 = earlier game iterations (not versioned, collected before this field existed)
+// v3 = block-cipher + phishing-inspector + terminal-forensics, auto-hints, simplified UI labels
+export const GAME_VERSION = "v3";
+
 export interface SurveyItem {
   id: SurveyItemId;
   label: string;

@@ -222,9 +222,14 @@ export function TerminalForensicsLevel({
               )}
 
               {feedback === "wrong" && (
-                <p className="font-mono text-[0.65rem] text-[#ef4444]">
-                  // Incorrect. Use the terminal to investigate further.
-                </p>
+                <div className="space-y-1">
+                  <p className="font-mono text-[0.65rem] text-[#ef4444]">
+                    Incorrect — try again.
+                  </p>
+                  <p className="font-mono text-[0.65rem] text-[#c3a257]">
+                    Hint: {obj.hint}
+                  </p>
+                </div>
               )}
             </div>
           );
@@ -239,7 +244,7 @@ export function TerminalForensicsLevel({
             onClick={handleSkip}
             className="rounded border border-[#624616] bg-transparent font-mono text-xs uppercase tracking-[0.16em] text-[#d4a843] hover:bg-[#2a1c08]"
           >
-            // BYPASS FOXTROT
+            Skip this level
           </Button>
         </div>
       )}

@@ -5,7 +5,6 @@ import "@fontsource/ibm-plex-mono/500.css";
 
 import { useEffect, useRef, useState } from "react";
 
-import { Button } from "@/components/ui/button";
 import {
   levelOrder,
   levelReadyStatuses,
@@ -180,7 +179,6 @@ export function GameplayExperience({
   // Per-level tracking
   const [attemptsPerLevel, setAttemptsPerLevel] = useState<Record<string, number>>({});
   const [hintsUnlockedPerLevel, setHintsUnlockedPerLevel] = useState<Record<string, number>>({});
-  const [hintsRevealedPerLevel, setHintsRevealedPerLevel] = useState<Record<string, number>>({});
   const levelStartTimes = useRef<Record<string, number>>({});
   const startedLevels = useRef<Set<string>>(new Set());
 
@@ -210,13 +208,12 @@ export function GameplayExperience({
   // Current level
   const currentLevelId = levelOrder[currentLevelIndex];
   const attempts = currentLevelId ? (attemptsPerLevel[currentLevelId] ?? 0) : 0;
-  const hintsUsed = currentLevelId ? (hintsRevealedPerLevel[currentLevelId] ?? 0) : 0;
-  const startTime = currentLevelId ? (levelStartTimes.current[currentLevelId] ?? Date.now()) : Date.now();
   const hintsUnlocked = currentLevelId ? (hintsUnlockedPerLevel[currentLevelId] ?? 0) : 0;
-  const hintsRevealed = currentLevelId ? (hintsRevealedPerLevel[currentLevelId] ?? 0) : 0;
-  // Get hints from level content
+  const hintsUsed = hintsUnlocked;
+  const startTime = currentLevelId ? (levelStartTimes.current[currentLevelId] ?? Date.now()) : Date.now();
+  // Get hints from level content — show all unlocked hints automatically
   const levelHints = currentLevelId ? getLevelHints(currentLevelId) : [];
-  const revealedHints = levelHints.slice(0, hintsRevealed);
+  const revealedHints = levelHints.slice(0, hintsUnlocked);
 
   const waveformState: WaveformState =
     currentLevelId && levelResults[currentLevelId]
@@ -292,13 +289,6 @@ export function GameplayExperience({
     if (n >= 2) setHintsUnlockedPerLevel((prev) => ({ ...prev, [currentLevelId]: Math.max(prev[currentLevelId] ?? 0, 1) }));
     if (n >= 3) setHintsUnlockedPerLevel((prev) => ({ ...prev, [currentLevelId]: Math.max(prev[currentLevelId] ?? 0, 2) }));
     if (n >= 4) setHintsUnlockedPerLevel((prev) => ({ ...prev, [currentLevelId]: Math.max(prev[currentLevelId] ?? 0, 3) }));
-  }
-
-  function handleRevealHint() {
-    if (!currentLevelId || hintsRevealed >= hintsUnlocked) return;
-    const next = hintsRevealed + 1;
-    setHintsRevealedPerLevel((prev) => ({ ...prev, [currentLevelId]: next }));
-    void sendStudyEvent({ participantId, sessionId, eventName: "hint_opened", levelId: currentLevelId, metadata: { hintIndex: next } });
   }
 
   // onBurst is called by levels just before onComplete — flag capture is triggered in handleLevelComplete instead
@@ -482,40 +472,26 @@ export function GameplayExperience({
             {/* Right sidebar — fixed width, vertically stacked */}
             <div className="game-sidebar flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto xl:w-72 xl:shrink-0">
 
-              {/* Intel / hints */}
+              {/* Hints */}
               <div className="terminal-panel space-y-3 shrink-0">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="font-mono text-[0.65rem] uppercase tracking-[0.28em] text-[#5a6a7a]">// Intel</p>
-                  {hintsUnlocked > hintsRevealed && (
-                    <span className="font-mono text-[0.6rem] uppercase tracking-[0.18em] text-[#4ade80]">NEW</span>
+                  <p className="font-mono text-[0.65rem] uppercase tracking-[0.28em] text-[#5a6a7a]">Hints</p>
+                  {hintsUnlocked > 0 && (
+                    <span className="font-mono text-[0.6rem] uppercase tracking-[0.18em] text-[#4ade80]">{hintsUnlocked} available</span>
                   )}
                 </div>
-
-                <Button
-                  variant="secondary"
-                  onClick={handleRevealHint}
-                  disabled={hintsRevealed >= hintsUnlocked}
-                  fullWidth
-                  className="rounded border border-[#1a2840] bg-[#10192a] font-mono text-[0.65rem] uppercase tracking-[0.18em] text-[#d4a843] hover:border-[#d4a843] hover:bg-[#10192a] hover:text-[#f2c96a]"
-                >
-                  {hintsUnlocked === 0
-                    ? "// NO INTEL"
-                    : hintsRevealed < hintsUnlocked
-                      ? "// NEW INTEL"
-                      : "// ALL REVIEWED"}
-                </Button>
 
                 {revealedHints.length > 0 ? (
                   <div className="space-y-2">
                     {revealedHints.map((hint, index) => (
                       <div key={hint} className="rounded border border-[#1a2840] bg-[#09111c] px-3 py-2 font-mono text-xs leading-5 text-[#c3a257]">
-                        <p className="text-[0.6rem] uppercase tracking-[0.18em] text-[#4ade80]">{`// INTEL ${index + 1}`}</p>
+                        <p className="text-[0.6rem] uppercase tracking-[0.18em] text-[#4ade80]">{`Hint ${index + 1}`}</p>
                         <p className="mt-1 text-[#9aa8b8]">{hint}</p>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="font-mono text-[0.65rem] text-[#3a4a5a]">// Unlocks after inactivity or failed attempts.</p>
+                  <p className="font-mono text-[0.65rem] text-[#3a4a5a]">Hints appear automatically if you get stuck.</p>
                 )}
               </div>
 

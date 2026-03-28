@@ -1,3 +1,6 @@
+"use client";
+
+import { useState, useMemo } from "react";
 import type { ReactNode } from "react";
 
 import { likertLabels, priorExperienceLabels } from "@/config/study";
@@ -398,6 +401,9 @@ function ResultsTable({ rows }: { rows: AdminParticipantReportRow[] }) {
                   <td className="border-b border-[var(--border)] px-4 py-4">
                     <div className="space-y-2 text-sm">
                       <StatusPill completed={row.completed} />
+                      <span className="inline-block rounded-full border border-[var(--border-strong)] px-2 py-0.5 font-mono text-[10px] text-[var(--ink-muted)]">
+                        {row.gameVersion}
+                      </span>
                       <p className="text-[var(--ink)]">Levels: {row.levelsCompletedCount}/3</p>
                       <p className="text-[var(--ink-muted)]">
                         Started: {formatTimestamp(row.startedAt)}
@@ -467,29 +473,56 @@ function ResultsTable({ rows }: { rows: AdminParticipantReportRow[] }) {
   );
 }
 
+function computeSummary(rows: AdminParticipantReportRow[]) {
+  return {
+    participantRows: rows.length,
+    completionRatePct: percentage(rows.filter((r) => r.completed).length, rows.length),
+    averagePreScore: average(rows.flatMap((r) => (r.preScore === null ? [] : [r.preScore]))),
+    averagePostScore: average(rows.flatMap((r) => (r.postScore === null ? [] : [r.postScore]))),
+    averageScoreGain: average(rows.flatMap((r) => (r.scoreGain === null ? [] : [r.scoreGain]))),
+    averageSessionDurationMs: average(rows.flatMap((r) => (r.sessionDurationMs === null ? [] : [r.sessionDurationMs])), 0),
+    averageTotalAttempts: average(rows.map((r) => r.totalAttempts)),
+    averageTotalHintsOpened: average(rows.map((r) => r.hintsOpened)),
+    averageLevelsCompletedCount: average(rows.map((r) => r.levelsCompletedCount)),
+  };
+}
+
 export function AdminConsole({
   analysisExportHref,
   rawExportHref,
   overview,
 }: AdminConsoleProps) {
-  const rows = overview.rows;
+  const allVersions = useMemo(() => {
+    const versions = Array.from(new Set(overview.rows.map((r) => r.gameVersion))).sort();
+    return versions;
+  }, [overview.rows]);
+
+  const [versionFilter, setVersionFilter] = useState<string>("all");
+
+  const rows = useMemo(() => {
+    if (versionFilter === "all") return overview.rows;
+    return overview.rows.filter((r) => r.gameVersion === versionFilter);
+  }, [overview.rows, versionFilter]);
+
+  const summary = useMemo(() => computeSummary(rows), [rows]);
+
   const scoreShiftItems: VerticalBarItem[] = [
     {
       label: "Pre-test",
-      value: overview.summary.averagePreScore ?? 0,
-      displayValue: formatScore(overview.summary.averagePreScore),
+      value: summary.averagePreScore ?? 0,
+      displayValue: formatScore(summary.averagePreScore),
       toneClass: "bg-gradient-to-t from-sky-600 to-sky-300",
     },
     {
       label: "Post-test",
-      value: overview.summary.averagePostScore ?? 0,
-      displayValue: formatScore(overview.summary.averagePostScore),
+      value: summary.averagePostScore ?? 0,
+      displayValue: formatScore(summary.averagePostScore),
       toneClass: "bg-gradient-to-t from-emerald-600 to-emerald-300",
     },
     {
       label: "Score gain",
-      value: Math.max(overview.summary.averageScoreGain ?? 0, 0),
-      displayValue: formatNumber(overview.summary.averageScoreGain),
+      value: Math.max(summary.averageScoreGain ?? 0, 0),
+      displayValue: formatNumber(summary.averageScoreGain),
       toneClass: "bg-gradient-to-t from-amber-500 to-yellow-300",
     },
   ];
@@ -606,42 +639,71 @@ export function AdminConsole({
         </div>
       </Card>
 
+      {/* Version filter */}
+      <Card className="p-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="font-mono text-xs uppercase tracking-[0.22em] text-[var(--ink-muted)]">
+            Game version
+          </p>
+          {["all", ...allVersions].map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setVersionFilter(v)}
+              className={[
+                "rounded-full border px-3 py-1 font-mono text-xs transition",
+                versionFilter === v
+                  ? "border-[var(--accent-strong)] bg-[var(--accent-strong)] text-white"
+                  : "border-[var(--border-strong)] text-[var(--ink-muted)] hover:border-[var(--accent-strong)]",
+              ].join(" ")}
+            >
+              {v === "all" ? `All (${overview.rows.length})` : `${v} (${overview.rows.filter((r) => r.gameVersion === v).length})`}
+            </button>
+          ))}
+          {versionFilter !== "all" && (
+            <p className="text-xs text-[var(--ink-muted)]">
+              Showing {rows.length} of {overview.rows.length} participants
+            </p>
+          )}
+        </div>
+      </Card>
+
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <SummaryStat
           label="Participant rows"
-          value={formatNumber(overview.summary.participantRows)}
+          value={formatNumber(summary.participantRows)}
         />
         <SummaryStat
           label="Completion rate"
-          value={formatPercent(overview.summary.completionRatePct)}
+          value={formatPercent(summary.completionRatePct)}
         />
         <SummaryStat
           label="Average pre-score"
-          value={formatScore(overview.summary.averagePreScore)}
+          value={formatScore(summary.averagePreScore)}
         />
         <SummaryStat
           label="Average post-score"
-          value={formatScore(overview.summary.averagePostScore)}
+          value={formatScore(summary.averagePostScore)}
         />
         <SummaryStat
           label="Average score gain"
-          value={formatNumber(overview.summary.averageScoreGain)}
+          value={formatNumber(summary.averageScoreGain)}
         />
         <SummaryStat
           label="Average session duration"
-          value={formatDurationMs(overview.summary.averageSessionDurationMs)}
+          value={formatDurationMs(summary.averageSessionDurationMs)}
         />
         <SummaryStat
           label="Average attempts"
-          value={formatNumber(overview.summary.averageTotalAttempts)}
+          value={formatNumber(summary.averageTotalAttempts)}
         />
         <SummaryStat
           label="Average hints opened"
-          value={formatNumber(overview.summary.averageTotalHintsOpened)}
+          value={formatNumber(summary.averageTotalHintsOpened)}
         />
         <SummaryStat
           label="Average levels completed"
-          value={formatNumber(overview.summary.averageLevelsCompletedCount)}
+          value={formatNumber(summary.averageLevelsCompletedCount)}
         />
       </div>
 

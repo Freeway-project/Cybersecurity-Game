@@ -286,7 +286,7 @@ export function PhishingInspectorLevel({
           </div>
           {attempts >= 3 && (
             <Button variant="secondary" onClick={handleSkip} className="w-full rounded border border-[#624616] bg-transparent font-mono text-xs uppercase tracking-[0.16em] text-[#d4a843] hover:bg-[#2a1c08]">
-              // BYPASS DELTA
+              Skip this level
             </Button>
           )}
         </div>

@@ -110,6 +110,7 @@ export interface ParticipantRecord {
 export interface SessionRecord {
   sessionId: string;
   participantId: string;
+  gameVersion?: string;
   deviceType: DeviceType;
   browserFamily: string;
   osFamily: string;

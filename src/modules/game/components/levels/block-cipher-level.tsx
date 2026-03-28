@@ -268,7 +268,7 @@ export function BlockCipherLevel({
 
       <div className="flex flex-wrap justify-end gap-3">
         {attempts >= 3 && (
-          <Button variant="secondary" onClick={handleSkip} className="rounded border border-[#624616] bg-transparent font-mono text-xs uppercase tracking-[0.16em] text-[#d4a843] hover:bg-[#2a1c08]">// BYPASS CHARLIE</Button>
+          <Button variant="secondary" onClick={handleSkip} className="rounded border border-[#624616] bg-transparent font-mono text-xs uppercase tracking-[0.16em] text-[#d4a843] hover:bg-[#2a1c08]">Skip this level</Button>
         )}
         <Button onClick={handleSubmit} className="rounded border border-[#1a2840] bg-[#162134] font-mono text-xs uppercase tracking-[0.2em] text-[#d4a843] shadow-none hover:bg-[#1d2a43]">// COMMIT CONFIGURATION</Button>
       </div>

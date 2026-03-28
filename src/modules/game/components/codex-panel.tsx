@@ -26,10 +26,10 @@ export function CodexPanel({
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="font-mono text-[0.7rem] uppercase tracking-[0.28em] text-[#5a6a7a]">
-            {"// Signal Log"}
+            What you learned
           </p>
           <p className="mt-1 font-mono text-sm text-[#d4a843]">
-            {unlockedEntries.length}/{Object.keys(codexEntries).length} entries unlocked
+            {unlockedEntries.length}/{Object.keys(codexEntries).length} topics unlocked
           </p>
         </div>
         <button
@@ -62,7 +62,7 @@ export function CodexPanel({
                       : "cursor-not-allowed border-[#1a2840] bg-[#0b1220] text-[#5a6a7a] opacity-70",
                   ].join(" ")}
                 >
-                  {unlocked ? entry.title : `${entry.title} -- LOCKED`}
+                  {unlocked ? entry.title : `${entry.title} (locked)`}
                 </button>
               );
             })}
@@ -74,14 +74,14 @@ export function CodexPanel({
               <div className="mt-4 space-y-4 text-sm leading-7 text-[#c3a257]">
                 <div>
                   <p className="text-xs uppercase tracking-[0.2em] text-[#5a6a7a]">
-                    {"// Encoding Method"}
+                    What is it?
                   </p>
                   <p className="mt-2 text-[#d4a843]">{activeEntry.method}</p>
                 </div>
 
                 <div>
                   <p className="text-xs uppercase tracking-[0.2em] text-[#5a6a7a]">
-                    {"// Analysis"}
+                    How it works
                   </p>
                   <div className="mt-2 space-y-2">
                     {activeEntry.analysis.map((line) => (
@@ -92,7 +92,7 @@ export function CodexPanel({
 
                 <div>
                   <p className="text-xs uppercase tracking-[0.2em] text-[#5a6a7a]">
-                    {"// Note"}
+                    Why it matters
                   </p>
                   <div className="mt-2 space-y-2">
                     {activeEntry.note.map((line) => (
@@ -103,14 +103,14 @@ export function CodexPanel({
               </div>
             ) : (
               <p className="mt-3 text-sm leading-6 text-[#5a6a7a]">
-                {"// ENTRY LOCKED -- decode the matching transmission to access this analyst note."}
+                Complete this level to unlock the explanation.
               </p>
             )}
           </div>
         </div>
       ) : (
         <p className="font-mono text-sm leading-6 text-[#5a6a7a]">
-          {"// New entries unlock after a transmission is resolved. Open the panel to review recovered analyst notes."}
+          Complete levels to unlock explanations of what you just learned.
         </p>
       )}
     </aside>

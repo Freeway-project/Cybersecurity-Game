@@ -84,6 +84,7 @@ export interface AdminParticipantReportRow {
   cohort: string;
   yearLevel: string;
   priorCryptoExperience: string;
+  gameVersion: string;
   sessionId: string;
   deviceType: string;
   browserFamily: string;
@@ -317,6 +318,7 @@ function flattenAnalysisRow(row: AdminParticipantReportRow) {
     cohort: row.cohort,
     yearLevel: row.yearLevel,
     priorCryptoExperience: row.priorCryptoExperience,
+    gameVersion: row.gameVersion,
     sessionId: row.sessionId,
     deviceType: row.deviceType,
     browserFamily: row.browserFamily,
@@ -459,6 +461,7 @@ function buildAdminRows({
         cohort: participant.cohort ?? "",
         yearLevel: participant.yearLevel ?? "",
         priorCryptoExperience: participant.priorCryptoExperience ?? "",
+        gameVersion: latestSession?.gameVersion ?? "pre-v3",
         sessionId: latestSession?.sessionId ?? "",
         deviceType: latestSession?.deviceType ?? "",
         browserFamily: latestSession?.browserFamily ?? "",

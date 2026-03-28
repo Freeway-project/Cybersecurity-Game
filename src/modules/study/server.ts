@@ -5,6 +5,7 @@ import { z } from "zod";
 import { buildDeviceContext } from "@/lib/device-context";
 import { getMongoDb } from "@/lib/mongodb";
 import { ensureStudyIndexes, logStudyEvent } from "@/modules/instrumentation/server";
+import { GAME_VERSION } from "@/config/study";
 import type {
   ConsentResponse,
   ParticipantRecord,
@@ -92,6 +93,7 @@ export async function acceptConsent(rawInput: unknown, userAgent: string | null)
       {
         $set: {
           participantId,
+          gameVersion: GAME_VERSION,
           deviceType: deviceContext.deviceType,
           browserFamily: deviceContext.browserFamily,
           osFamily: deviceContext.osFamily,
