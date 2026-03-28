@@ -29,7 +29,7 @@ export function CodexPanel({
             {"// Signal Log"}
           </p>
           <p className="mt-1 font-mono text-sm text-[#d4a843]">
-            {unlockedEntries.length}/3 entries unlocked
+            {unlockedEntries.length}/{Object.keys(codexEntries).length} entries unlocked
           </p>
         </div>
         <button

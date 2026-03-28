@@ -34,15 +34,21 @@ interface DualMetricItem {
 }
 
 const levelLabels: Record<LevelId, string> = {
-  "caesar-cipher": "Caesar cipher",
-  "xor-stream": "XOR stream",
-  "block-cipher": "Block cipher",
+  "caesar-cipher":      "Caesar cipher",
+  "xor-stream":         "XOR stream",
+  "block-cipher":       "Block cipher",
+  "phishing-inspector": "Phishing inspector",
+  "network-defense":    "Network defense",
+  "terminal-forensics": "Terminal forensics",
 };
 
 const reportLevelIds: LevelId[] = [
   "caesar-cipher",
   "xor-stream",
   "block-cipher",
+  "phishing-inspector",
+  "network-defense",
+  "terminal-forensics",
 ];
 
 function formatText(value: string | null | undefined, fallback = "Not recorded") {

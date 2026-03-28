@@ -1,22 +1,9 @@
 import type {
-  AssessmentItemId,
   LikertScore,
   PriorCryptoExperience,
   SurveyItemId,
   StudyStep,
 } from "@/types/study";
-
-export interface AssessmentItemOption {
-  value: string;
-  label: string;
-}
-
-export interface AssessmentItem {
-  id: AssessmentItemId;
-  prompt: string;
-  options: AssessmentItemOption[];
-  correctAnswer: string;
-}
 
 export interface SurveyItem {
   id: SurveyItemId;
@@ -24,73 +11,30 @@ export interface SurveyItem {
 }
 
 export const studyCopy = {
-  title: "Signal Interceptor",
+  title: "Operation: Signal Ghost",
   subtitle:
-    "A narrative research game about intercepting hostile transmissions and reconstructing unreadable signals.",
-  consentHeading: "Consent and study conditions",
+    "A cybersecurity mission game — intercept transmissions, detect threats, defend networks, and investigate breaches.",
+  consentHeading: "// ANALYST REGISTRATION",
   consentBullets: [
     "Participation is voluntary and not graded.",
-    "You may stop at any time without penalty.",
-    "The pilot stores anonymous gameplay, assessment, and survey responses.",
-  ],
-  sessionOutline: [
-    "Consent and setup",
-    "Three-question pre-test",
-    "Three signal intercept levels",
-    "Three-question post-test",
-    "Short perception survey",
+    "You may stand down at any time without penalty.",
+    "The station stores anonymous gameplay and survey data for research.",
   ],
 };
 
 export const studyStepLabels: Record<Exclude<StudyStep, "landing" | "complete">, string> = {
-  consent: "Consent",
-  pretest: "Pre-test",
-  "game-placeholder": "Gameplay",
-  posttest: "Post-test",
+  consent: "Register",
+  briefing: "Briefing",
+  "game-placeholder": "Mission",
+  debrief: "Debrief",
   survey: "Survey",
 };
 
-export const assessmentItems: AssessmentItem[] = [
-  {
-    id: "caesar-basics",
-    prompt: "A Caesar cipher with shift 3 changes A into:",
-    options: [
-      { value: "D", label: "D" },
-      { value: "B", label: "B" },
-      { value: "X", label: "X" },
-      { value: "Z", label: "Z" },
-    ],
-    correctAnswer: "D",
-  },
-  {
-    id: "xor-alignment",
-    prompt: "For XOR decryption, what must match before you can combine two hex strings safely?",
-    options: [
-      { value: "length", label: "They must be aligned and the same length." },
-      { value: "case", label: "They must use uppercase hex only." },
-      { value: "spacing", label: "They must include a space every two bytes." },
-      { value: "padding", label: "They must always end with 00." },
-    ],
-    correctAnswer: "length",
-  },
-  {
-    id: "block-key-iv",
-    prompt: "In a block cipher workflow, the IV is used to:",
-    options: [
-      { value: "replace-key", label: "Replace the secret key entirely." },
-      { value: "randomize", label: "Add fresh randomness without changing the secret key." },
-      { value: "compress", label: "Compress the plaintext before encryption." },
-      { value: "decode", label: "Decode the ciphertext directly." },
-    ],
-    correctAnswer: "randomize",
-  },
-];
-
 export const surveyItems: SurveyItem[] = [
-  { id: "helpfulScore", label: "The game helped me understand the topic." },
-  { id: "hintsScore", label: "The hints were useful." },
-  { id: "engagementScore", label: "The experience felt engaging." },
-  { id: "reuseScore", label: "I would use this format in a class again." },
+  { id: "helpfulScore", label: "The game helped me understand the cybersecurity concepts." },
+  { id: "hintsScore", label: "The intel hints were useful when I was stuck." },
+  { id: "engagementScore", label: "The experience felt engaging, not like a quiz." },
+  { id: "reuseScore", label: "I would use this format in a class or training again." },
 ];
 
 export const likertLabels: Record<LikertScore, string> = {
