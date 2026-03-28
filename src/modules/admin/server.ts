@@ -4,14 +4,29 @@ import { toCsv } from "@/lib/csv";
 import { getMongoDb } from "@/lib/mongodb";
 import { ensureStudyIndexes } from "@/modules/instrumentation/server";
 import type {
-  AssessmentItemId,
-  AssessmentRecord,
   LevelId,
   ParticipantRecord,
   SessionRecord,
   StudyEventRecord,
   SurveyRecord,
 } from "@/types/study";
+
+// Legacy stubs — assessment step removed; types and constants kept to preserve CSV export shape
+type AssessmentItemId = "caesar-basics" | "xor-alignment" | "block-key-iv";
+interface AssessmentRecord {
+  participantId: string;
+  updatedAt?: Date;
+  preScore?: number;
+  postScore?: number;
+  itemScoresPre?: Record<string, { answer: string; correct: boolean }>;
+  itemScoresPost?: Record<string, { answer: string; correct: boolean }>;
+}
+const assessmentItemIds: AssessmentItemId[] = ["caesar-basics", "xor-alignment", "block-key-iv"];
+const assessmentItemPrefixes: Record<AssessmentItemId, string> = {
+  "caesar-basics": "caesarBasics",
+  "xor-alignment": "xorAlignment",
+  "block-key-iv": "blockKeyIv",
+};
 
 const collectionSchema = z.enum([
   "participants",
@@ -21,28 +36,26 @@ const collectionSchema = z.enum([
   "surveys",
 ]);
 
-const assessmentItemIds: AssessmentItemId[] = [
-  "caesar-basics",
-  "xor-alignment",
-  "block-key-iv",
-];
-
-const assessmentItemPrefixes: Record<AssessmentItemId, string> = {
-  "caesar-basics": "caesarBasics",
-  "xor-alignment": "xorAlignment",
-  "block-key-iv": "blockKeyIv",
-};
-
 const reportLevelIds: LevelId[] = [
   "caesar-cipher",
   "xor-stream",
   "block-cipher",
+  "phishing-inspector",
+  "network-defense",
+  "terminal-forensics",
+  "dual-role-defender",
+  "soc-triage",
 ];
 
 const reportLevelPrefixes: Record<LevelId, string> = {
   "caesar-cipher": "caesar",
   "xor-stream": "xor",
   "block-cipher": "block",
+  "phishing-inspector": "phishing",
+  "network-defense": "networkDefense",
+  "terminal-forensics": "terminalForensics",
+  "dual-role-defender": "dualRoleDefender",
+  "soc-triage": "socTriage",
 };
 
 export interface AdminAssessmentAnswerReport {
@@ -413,20 +426,22 @@ function buildAdminRows({
       );
       const skippedLevels = new Set(latestSession?.skippedLevels ?? []);
       const levels = {
-        "caesar-cipher": buildLevelReport(scopedEvents, "caesar-cipher", skippedLevels),
-        "xor-stream": buildLevelReport(scopedEvents, "xor-stream", skippedLevels),
-        "block-cipher": buildLevelReport(scopedEvents, "block-cipher", skippedLevels),
+        "caesar-cipher":      buildLevelReport(scopedEvents, "caesar-cipher", skippedLevels),
+        "xor-stream":         buildLevelReport(scopedEvents, "xor-stream", skippedLevels),
+        "block-cipher":       buildLevelReport(scopedEvents, "block-cipher", skippedLevels),
+        "phishing-inspector": buildLevelReport(scopedEvents, "phishing-inspector", skippedLevels),
+        "network-defense":    buildLevelReport(scopedEvents, "network-defense", skippedLevels),
+        "terminal-forensics": buildLevelReport(scopedEvents, "terminal-forensics", skippedLevels),
+        "dual-role-defender": buildLevelReport(scopedEvents, "dual-role-defender", skippedLevels),
+        "soc-triage":         buildLevelReport(scopedEvents, "soc-triage", skippedLevels),
       } satisfies Record<LevelId, AdminLevelReport>;
 
-      const preStartEvent = firstEvent(scopedEvents, "pretest_started");
-      const preSubmitEvent = firstEvent(scopedEvents, "pretest_submitted");
-      const postStartEvent = firstEvent(scopedEvents, "posttest_started");
-      const postSubmitEvent = firstEvent(scopedEvents, "posttest_submitted");
-      const scoreGain =
-        typeof latestAssessment?.preScore === "number" &&
-        typeof latestAssessment?.postScore === "number"
-          ? latestAssessment.postScore - latestAssessment.preScore
-          : null;
+      // Assessment step removed — scores always null
+      const preStartEvent = null;
+      const preSubmitEvent = null;
+      const postStartEvent = null;
+      const postSubmitEvent = null;
+      const scoreGain: number | null = null;
       const codexEntriesViewed = uniqueStrings(
         reportLevelIds.flatMap((levelId) => levels[levelId].codexEntriesViewed),
       );
@@ -466,18 +481,12 @@ function buildAdminRows({
             ? latestAssessment.postScore
             : null,
         scoreGain,
-        preTestStartedAt: dateToIso(preStartEvent?.timestamp),
-        preTestSubmittedAt: dateToIso(preSubmitEvent?.timestamp),
-        preTestDurationMs: durationBetween(
-          preStartEvent?.timestamp,
-          preSubmitEvent?.timestamp,
-        ),
-        postTestStartedAt: dateToIso(postStartEvent?.timestamp),
-        postTestSubmittedAt: dateToIso(postSubmitEvent?.timestamp),
-        postTestDurationMs: durationBetween(
-          postStartEvent?.timestamp,
-          postSubmitEvent?.timestamp,
-        ),
+        preTestStartedAt: null,
+        preTestSubmittedAt: null,
+        preTestDurationMs: null,
+        postTestStartedAt: null,
+        postTestSubmittedAt: null,
+        postTestDurationMs: null,
         helpfulScore:
           typeof latestSurvey?.helpfulScore === "number"
             ? latestSurvey.helpfulScore

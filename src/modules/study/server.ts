@@ -2,14 +2,10 @@ import { randomUUID } from "crypto";
 
 import { z } from "zod";
 
-import { assessmentItems } from "@/config/study";
 import { buildDeviceContext } from "@/lib/device-context";
 import { getMongoDb } from "@/lib/mongodb";
 import { ensureStudyIndexes, logStudyEvent } from "@/modules/instrumentation/server";
 import type {
-  AssessmentPhase,
-  AssessmentAnswer,
-  AssessmentRecord,
   ConsentResponse,
   ParticipantRecord,
   SessionRecord,
@@ -29,16 +25,6 @@ const consentSchema = z.object({
     })
     .nullable(),
   inputType: z.enum(["touch", "mouse-keyboard", "unknown"]),
-});
-
-const assessmentSchema = z.object({
-  participantId: z.string().min(1),
-  sessionId: z.string().min(1),
-  answers: z.object({
-    "caesar-basics": z.string().min(1),
-    "xor-alignment": z.string().min(1),
-    "block-key-iv": z.string().min(1),
-  }),
 });
 
 const surveySchema = z.object({
@@ -150,59 +136,6 @@ export async function acceptConsent(rawInput: unknown, userAgent: string | null)
     ok: true,
     sessionId,
     participantId,
-  };
-}
-
-export async function submitAssessment(
-  phase: AssessmentPhase,
-  rawInput: unknown,
-  userAgent: string | null,
-) {
-  await ensureStudyIndexes();
-  const input = assessmentSchema.parse(rawInput);
-  const scoreMap = Object.fromEntries(
-    assessmentItems.map((item) => [
-      item.id,
-      {
-        answer: input.answers[item.id],
-        correct: input.answers[item.id] === item.correctAnswer,
-      },
-    ]),
-  ) as Record<string, AssessmentAnswer>;
-
-  const score = Object.values(scoreMap).filter((entry) => entry.correct).length;
-  const db = await getMongoDb();
-
-  await db.collection<AssessmentRecord>("assessments").updateOne(
-    { participantId: input.participantId },
-    {
-      $set: {
-        updatedAt: new Date(),
-        ...(phase === "pre"
-          ? { preScore: score, itemScoresPre: scoreMap }
-          : { postScore: score, itemScoresPost: scoreMap }),
-      },
-      $setOnInsert: {
-        participantId: input.participantId,
-      },
-    },
-    { upsert: true },
-  );
-
-  await logStudyEvent(
-    {
-      participantId: input.participantId,
-      sessionId: input.sessionId,
-      eventName: phase === "pre" ? "pretest_submitted" : "posttest_submitted",
-      result: `${score}/${assessmentItems.length}`,
-    },
-    userAgent,
-  );
-
-  return {
-    ok: true,
-    score,
-    phase,
   };
 }
 

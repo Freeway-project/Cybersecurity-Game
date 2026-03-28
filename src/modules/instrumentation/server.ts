@@ -8,7 +8,6 @@ import type {
   SessionRecord,
   StudyEventRecord,
   SurveyRecord,
-  AssessmentRecord,
 } from "@/types/study";
 
 const eventSchema = z.object({
@@ -17,8 +16,7 @@ const eventSchema = z.object({
   eventName: z.enum([
     "consent_viewed",
     "consent_accepted",
-    "pretest_started",
-    "pretest_submitted",
+    "mission_started",
     "level_started",
     "shift_changed",
     "hint_opened",
@@ -29,8 +27,12 @@ const eventSchema = z.object({
     "channel_configured",
     "level_completed",
     "level_skipped",
-    "posttest_started",
-    "posttest_submitted",
+    "flag_captured",
+    "breach_detected",
+    "defense_placed",
+    "phishing_element_found",
+    "terminal_command_executed",
+    "mission_completed",
     "survey_started",
     "survey_completed",
     "session_started",
@@ -70,9 +72,6 @@ export async function ensureStudyIndexes() {
         db
           .collection<StudyEventRecord>("events")
           .createIndex({ sessionId: 1, timestamp: 1 }),
-        db
-          .collection<AssessmentRecord>("assessments")
-          .createIndex({ participantId: 1 }, { unique: true }),
         db.collection<SurveyRecord>("surveys").createIndex({ participantId: 1 }, { unique: true }),
       ]);
     })();
