@@ -276,11 +276,17 @@ button {
   .hint-card-glow { animation: none; }
 }
 
-/* Terminal theme — scoped to game levels only */
+/* Terminal theme — full-screen mission layout */
 .terminal-canvas {
   background: #080d14;
   color: #d4a843;
   font-family: 'IBM Plex Mono', 'Courier New', monospace;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
   position: relative;
 }
 
@@ -336,8 +342,8 @@ button {
 .terminal-panel {
   border: 1px solid #1a2840;
   background: #0a1020;
-  border-radius: 4px;
-  padding: 1.25rem;
+  border-radius: 8px;
+  padding: clamp(0.9rem, 0.75rem + 0.45vw, 1.2rem);
   position: relative;
   z-index: 1;
 }
@@ -416,15 +422,35 @@ button {
   100% { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-/* ── Terminal canvas ──────────────────────────────────────────────────────── */
-
-.terminal-canvas {
-  position: relative;
-  min-height: 100vh;
-  background: var(--canvas);
-}
+/* ── Terminal canvas inner ────────────────────────────────────────────────── */
 
 .terminal-canvas-inner {
-  padding: 1.5rem;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: clamp(0.6rem, 0.45rem + 0.5vw, 1rem);
+  display: flex;
+  flex-direction: column;
 }
 
+.game-scroll-area,
+.game-sidebar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(90, 106, 122, 0.6) transparent;
+}
+
+@media (max-width: 1279px) {
+  .terminal-canvas {
+    height: auto;
+    min-height: 100dvh;
+  }
+
+  .terminal-canvas-inner {
+    overflow-y: auto;
+  }
+
+  .game-scroll-area,
+  .game-sidebar {
+    overflow: visible;
+  }
+}

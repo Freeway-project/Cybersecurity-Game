@@ -385,28 +385,10 @@ export function GameplayExperience({
     }
   }
 
-  // ── Mission complete screen ─────────────────────────────────────────────────
-
-  if (phase === "done") {
-    return (
-      <div className="terminal-canvas">
-        <div className="terminal-panel space-y-4">
-          <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#4ade80]">// OPERATION SIGNAL GHOST -- COMPLETE</p>
-          <div className="space-y-2 font-mono text-sm leading-7 text-[#d4a843]">
-            <p>// ALL {levelOrder.length} TRANSMISSIONS ANALYSED</p>
-            <p>// TOTAL SCORE: {totalScore.toLocaleString()} / {totalMaxScore.toLocaleString()}</p>
-            <p>// FLAGS CAPTURED: {flagsCaptured}/{levelOrder.length}</p>
-            <p>// LOGGING TO SIGNAL LOG...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   // ── Game canvas ─────────────────────────────────────────────────────────────
 
   return (
-    <div className="terminal-canvas relative">
+    <div className="terminal-canvas">
       {/* Score bar */}
       <ScoreBar
         score={totalScore}
@@ -433,59 +415,80 @@ export function GameplayExperience({
       )}
 
       <div className="terminal-canvas-inner">
-        {/* Boot intro */}
+
+        {/* ── Boot intro ── */}
         {phase === "intro" && (
-          <BootIntro onDone={() => {
-            setPhase("level");
-            void sendStudyEvent({ participantId, sessionId, eventName: "mission_started" });
-          }} />
+          <div className="flex flex-1 items-center justify-center">
+            <div className="w-full max-w-2xl">
+              <BootIntro onDone={() => {
+                setPhase("level");
+                void sendStudyEvent({ participantId, sessionId, eventName: "mission_started" });
+              }} />
+            </div>
+          </div>
         )}
 
-        {/* Transition beat */}
-        {phase === "transition" && currentLevelId && currentLevelId !== "terminal-forensics" && currentLevelId !== "dual-role-defender" && currentLevelId !== "soc-triage" && (
-          <TransitionBeat
-            lines={transitionBeats[currentLevelId as Exclude<typeof currentLevelId, "terminal-forensics" | "dual-role-defender" | "soc-triage">].lines}
-            action={transitionBeats[currentLevelId as Exclude<typeof currentLevelId, "terminal-forensics" | "dual-role-defender" | "soc-triage">].action}
-            onNext={advanceToNextLevel}
-          />
+        {/* ── Transition beat ── */}
+        {phase === "transition" && currentLevelId && currentLevelId !== "terminal-forensics" && currentLevelId !== "network-defense" && currentLevelId !== "dual-role-defender" && currentLevelId !== "soc-triage" && (
+          <div className="flex flex-1 items-center justify-center">
+            <div className="w-full max-w-2xl">
+              <TransitionBeat
+                lines={transitionBeats[currentLevelId as Exclude<typeof currentLevelId, "terminal-forensics" | "network-defense" | "dual-role-defender" | "soc-triage">].lines}
+                action={transitionBeats[currentLevelId as Exclude<typeof currentLevelId, "terminal-forensics" | "network-defense" | "dual-role-defender" | "soc-triage">].action}
+                onNext={advanceToNextLevel}
+              />
+            </div>
+          </div>
         )}
 
-        {/* Active level */}
+        {/* ── Mission complete ── */}
+        {phase === "done" && (
+          <div className="flex flex-1 items-center justify-center">
+            <div className="terminal-panel w-full max-w-xl space-y-4">
+              <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#4ade80]">// OPERATION SIGNAL GHOST -- COMPLETE</p>
+              <div className="space-y-2 font-mono text-sm leading-7 text-[#d4a843]">
+                <p>// ALL {levelOrder.length} TRANSMISSIONS ANALYSED</p>
+                <p>// TOTAL SCORE: {totalScore.toLocaleString()} / {totalMaxScore.toLocaleString()}</p>
+                <p>// FLAGS CAPTURED: {flagsCaptured}/{levelOrder.length}</p>
+                <p>// LOGGING TO SIGNAL LOG...</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Active level — 2-column desktop layout ── */}
         {phase === "level" && (
-          <div className="grid gap-6 xl:grid-cols-[1fr_280px]">
-            {/* Main panel */}
-            <div className="space-y-4">
+          <div className="grid flex-1 min-h-0 gap-3 xl:grid-cols-[minmax(0,1fr)_18rem]">
+
+            {/* Left: status strip + level component */}
+            <div className="flex min-h-0 min-w-0 flex-col gap-3">
               {/* Status header */}
-              <div className="terminal-panel flex items-center gap-4">
+              <div className="terminal-panel flex shrink-0 items-center gap-3 px-3 py-2">
                 <StatusWaveform state={waveformState} />
-                <div className="min-w-0 flex-1">
-                  <p className={[
-                    "font-mono text-xs uppercase tracking-[0.22em]",
-                    statusTone === "success" ? "text-[#4ade80]" : statusTone === "error" ? "text-[#ef4444]" : "text-[#c3a257]",
-                  ].join(" ")}>
-                    {statusLine}
-                  </p>
-                </div>
+                <p className={[
+                  "font-mono text-xs uppercase tracking-[0.22em] truncate",
+                  statusTone === "success" ? "text-[#4ade80]" : statusTone === "error" ? "text-[#ef4444]" : "text-[#c3a257]",
+                ].join(" ")}>
+                  {statusLine}
+                </p>
               </div>
 
-              {/* Level component */}
-              {renderLevel()}
+              {/* Level component — scrollable if content overflows */}
+              <div className="game-scroll-area flex-1 min-h-0 overflow-y-auto pr-1">
+                {renderLevel()}
+              </div>
             </div>
 
-            {/* Sidebar */}
-            <div className="space-y-4">
+            {/* Right sidebar — fixed width, vertically stacked */}
+            <div className="game-sidebar flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto xl:w-72 xl:shrink-0">
+
               {/* Intel / hints */}
-              <div className="terminal-panel space-y-4">
-                <div>
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#5a6a7a]">// Intel</p>
-                    {hintsUnlocked > hintsRevealed && (
-                      <span className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-[#4ade80]">// NEW</span>
-                    )}
-                  </div>
-                  <p className="mt-3 font-mono text-sm leading-7 text-[#5a6a7a]">
-                    // Intel unlocks automatically as you work.
-                  </p>
+              <div className="terminal-panel space-y-3 shrink-0">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-mono text-[0.65rem] uppercase tracking-[0.28em] text-[#5a6a7a]">// Intel</p>
+                  {hintsUnlocked > hintsRevealed && (
+                    <span className="font-mono text-[0.6rem] uppercase tracking-[0.18em] text-[#4ade80]">NEW</span>
+                  )}
                 </div>
 
                 <Button
@@ -493,32 +496,30 @@ export function GameplayExperience({
                   onClick={handleRevealHint}
                   disabled={hintsRevealed >= hintsUnlocked}
                   fullWidth
-                  className="rounded border border-[#1a2840] bg-[#10192a] font-mono text-xs uppercase tracking-[0.18em] text-[#d4a843] hover:border-[#d4a843] hover:bg-[#10192a] hover:text-[#f2c96a]"
+                  className="rounded border border-[#1a2840] bg-[#10192a] font-mono text-[0.65rem] uppercase tracking-[0.18em] text-[#d4a843] hover:border-[#d4a843] hover:bg-[#10192a] hover:text-[#f2c96a]"
                 >
                   {hintsUnlocked === 0
-                    ? "// NO INTEL AVAILABLE"
+                    ? "// NO INTEL"
                     : hintsRevealed < hintsUnlocked
-                      ? "// NEW INTEL RECEIVED"
-                      : "// ALL INTEL REVIEWED"}
+                      ? "// NEW INTEL"
+                      : "// ALL REVIEWED"}
                 </Button>
 
                 {revealedHints.length > 0 ? (
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {revealedHints.map((hint, index) => (
-                      <div key={hint} className="rounded border border-[#1a2840] bg-[#09111c] px-4 py-3 font-mono text-sm leading-7 text-[#c3a257]">
-                        <p className="text-xs uppercase tracking-[0.18em] text-[#4ade80]">{`// INTEL ${index + 1}`}</p>
-                        <p className="mt-2">&gt; {hint}</p>
+                      <div key={hint} className="rounded border border-[#1a2840] bg-[#09111c] px-3 py-2 font-mono text-xs leading-5 text-[#c3a257]">
+                        <p className="text-[0.6rem] uppercase tracking-[0.18em] text-[#4ade80]">{`// INTEL ${index + 1}`}</p>
+                        <p className="mt-1 text-[#9aa8b8]">{hint}</p>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="rounded border border-dashed border-[#1a2840] bg-[#09111c] px-4 py-3 font-mono text-sm leading-7 text-[#5a6a7a]">
-                    // NO INTEL AVAILABLE
-                  </div>
+                  <p className="font-mono text-[0.65rem] text-[#3a4a5a]">// Unlocks after inactivity or failed attempts.</p>
                 )}
               </div>
 
-              {/* Codex */}
+              {/* Signal Log / Codex */}
               <CodexPanel
                 activeEntryId={activeCodexEntry}
                 isOpen={codexOpen}

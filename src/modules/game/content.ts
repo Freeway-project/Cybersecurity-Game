@@ -213,7 +213,6 @@ export type GameplayLevelConfig =
 export const levelOrder: LevelId[] = [
   "block-cipher",
   "phishing-inspector",
-  "network-defense",
   "terminal-forensics",
 ];
 
@@ -798,7 +797,7 @@ export const gameplayLevels: GameplayLevelConfig[] = [
 // ── Transition beats between levels ─────────────────────────────────────────
 
 export const transitionBeats: Record<
-  Exclude<LevelId, "terminal-forensics" | "dual-role-defender" | "soc-triage">,
+  Exclude<LevelId, "terminal-forensics" | "network-defense" | "dual-role-defender" | "soc-triage">,
   { lines: string[]; action: string }
 > = {
   "caesar-cipher": {
@@ -832,17 +831,8 @@ export const transitionBeats: Record<
     lines: [
       "// PHISHING CAMPAIGN CONFIRMED",
       "// SOURCE TRACED TO EXTERNAL THREAT ACTOR",
-      "// NETWORK TOPOLOGY COMPROMISED -- ECHO CHANNEL",
-      "// DEFENSIVE DEPLOYMENT REQUIRED",
-    ],
-    action: "// [OPEN ECHO CHANNEL]",
-  },
-  "network-defense": {
-    lines: [
-      "// THREATS NEUTRALISED",
       "// BREACH LOGS DETECTED ON INTERNAL SERVER",
       "// FORENSIC ANALYSIS REQUIRED -- FOXTROT CHANNEL",
-      "// TERMINAL ACCESS GRANTED",
     ],
     action: "// [OPEN FOXTROT CHANNEL]",
   },

@@ -278,8 +278,8 @@ export function TerminalEmulator({ filesystem, onCommand }: Props) {
 
   return (
     <div
-      className="terminal-panel flex flex-col overflow-hidden p-0"
-      style={{ minHeight: "340px", maxHeight: "500px" }}
+      className="terminal-panel flex flex-col overflow-hidden p-0 h-full"
+      style={{ minHeight: "280px" }}
       onClick={() => inputRef.current?.focus()}
     >
       {/* Output area */}

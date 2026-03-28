@@ -299,20 +299,6 @@ export function StudyExperience({ initialName }: StudyExperienceProps) {
       );
     }
 
-    if (currentStep === "game-placeholder") {
-      return (
-        <GameplayExperience
-          participantId={participantId}
-          sessionId={sessionId ?? ""}
-          onComplete={(skipped) => {
-            setSkippedLevels(skipped);
-            setCurrentStep("survey");
-            setFeedback(null);
-          }}
-        />
-      );
-    }
-
     if (currentStep === "debrief") {
       // Debrief is handled inside GameplayExperience — this step is a pass-through
       setCurrentStep("survey");
@@ -432,12 +418,25 @@ export function StudyExperience({ initialName }: StudyExperienceProps) {
     complete: 3,
   };
 
+  if (currentStep === "game-placeholder") {
+    return (
+      <GameplayExperience
+        participantId={participantId}
+        sessionId={sessionId ?? ""}
+        onComplete={(skipped) => {
+          setSkippedLevels(skipped);
+          setCurrentStep("survey");
+          setFeedback(null);
+        }}
+      />
+    );
+  }
+
   return (
     <SiteShell
       eyebrow="Research Pilot"
       title={studyCopy.title}
       description={studyCopy.subtitle}
-      compact={currentStep === "game-placeholder"}
       progressSteps={progressSteps}
       progressCurrent={stepToProgressIndex[currentStep]}
     >
