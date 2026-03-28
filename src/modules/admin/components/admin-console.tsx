@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import type { ReactNode } from "react";
 
 import { likertLabels, priorExperienceLabels } from "@/config/study";
@@ -497,18 +497,7 @@ export function AdminConsole({
   rawExportHref,
   overview,
 }: AdminConsoleProps) {
-  const allVersions = useMemo(() => {
-    const versions = Array.from(new Set(overview.rows.map((r) => r.gameVersion))).sort();
-    return versions;
-  }, [overview.rows]);
-
-  const [versionFilter, setVersionFilter] = useState<string>("all");
-
-  const rows = useMemo(() => {
-    if (versionFilter === "all") return overview.rows;
-    return overview.rows.filter((r) => r.gameVersion === versionFilter);
-  }, [overview.rows, versionFilter]);
-
+  const rows = overview.rows;
   const summary = useMemo(() => computeSummary(rows), [rows]);
 
   const scoreShiftItems: VerticalBarItem[] = [
@@ -531,9 +520,10 @@ export function AdminConsole({
       toneClass: "bg-gradient-to-t from-amber-500 to-yellow-300",
     },
   ];
-  const levelCompletionItems: HorizontalBarItem[] = chartLevelIds.map((levelId) => {
+  // Position-based: "did the participant complete at least N levels?" — works across all game versions
+  const levelCompletionItems: HorizontalBarItem[] = chartLevelIds.map((levelId, index) => {
     const value = percentage(
-      rows.filter((row) => row.levels[levelId].completed).length,
+      rows.filter((row) => row.levelsCompletedCount >= index + 1).length,
       rows.length,
     );
 
@@ -644,36 +634,7 @@ export function AdminConsole({
         </div>
       </Card>
 
-      {/* Version filter */}
-      <Card className="p-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <p className="font-mono text-xs uppercase tracking-[0.22em] text-[var(--ink-muted)]">
-            Game version
-          </p>
-          {["all", ...allVersions].map((v) => (
-            <button
-              key={v}
-              type="button"
-              onClick={() => setVersionFilter(v)}
-              className={[
-                "rounded-full border px-3 py-1 font-mono text-xs transition",
-                versionFilter === v
-                  ? "border-[var(--accent-strong)] bg-[var(--accent-strong)] text-white"
-                  : "border-[var(--border-strong)] text-[var(--ink-muted)] hover:border-[var(--accent-strong)]",
-              ].join(" ")}
-            >
-              {v === "all" ? `All (${overview.rows.length})` : `${v} (${overview.rows.filter((r) => r.gameVersion === v).length})`}
-            </button>
-          ))}
-          {versionFilter !== "all" && (
-            <p className="text-xs text-[var(--ink-muted)]">
-              Showing {rows.length} of {overview.rows.length} participants
-            </p>
-          )}
-        </div>
-      </Card>
-
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <SummaryStat
           label="Participant rows"
           value={formatNumber(summary.participantRows)}
