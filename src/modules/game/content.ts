@@ -150,17 +150,67 @@ export interface TerminalForensicsLevelConfig {
   hints: string[];
 }
 
+export interface AttackVector {
+  id: "sql-injection" | "brute-force" | "directory-traversal";
+  label: string;
+  shortcut: string;
+  prompt: string;
+  exampleParam: string;
+  logRows: Array<{ eventType: string; detailTemplate: string }>;
+}
+
+export interface NoiseLogRow {
+  timestamp: string;
+  sourceIp: string;
+  eventType: string;
+  details: string;
+}
+
+export interface DualRoleDefenderLevelConfig {
+  id: "dual-role-defender";
+  title: string;
+  mission: string;
+  attackVectors: AttackVector[];
+  noiseRows: NoiseLogRow[];
+  attackerIps: string[];
+  flag: string;
+  successMessage: string;
+  hints: string[];
+}
+
+export interface SocAlert {
+  id: string;
+  severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+  rule: string;
+  sourceIp: string;
+  payloadSnippet: string;
+  time: string;
+  isThreat: boolean;
+  explanation: string;
+}
+
+export interface SocTriageLevelConfig {
+  id: "soc-triage";
+  title: string;
+  mission: string;
+  alerts: SocAlert[];
+  passingThreshold: number;
+  flag: string;
+  successMessage: string;
+  hints: string[];
+}
+
 export type GameplayLevelConfig =
   | CaesarLevelConfig
   | XorLevelConfig
   | BlockCipherLevelConfig
   | PhishingInspectorLevelConfig
   | NetworkDefenseLevelConfig
-  | TerminalForensicsLevelConfig;
+  | TerminalForensicsLevelConfig
+  | DualRoleDefenderLevelConfig
+  | SocTriageLevelConfig;
 
 export const levelOrder: LevelId[] = [
-  "caesar-cipher",
-  "xor-stream",
   "block-cipher",
   "phishing-inspector",
   "network-defense",
@@ -563,6 +613,175 @@ exit`,
   ],
 };
 
+// ── LEVEL 7: Dual-Role Defender ──────────────────────────────────────────────
+
+export const dualRoleDefenderLevel: DualRoleDefenderLevelConfig = {
+  id: "dual-role-defender",
+  title: "Transmission Golf",
+  mission:
+    "Signal Ghost has gone active. To understand how to catch the attacker, you must first become them. Launch a simulated intrusion — then switch sides and identify your own attack in the log stream.",
+  attackVectors: [
+    {
+      id: "sql-injection",
+      label: "SQL INJECTION",
+      shortcut: "A",
+      prompt: "Enter target table name:",
+      exampleParam: "users",
+      logRows: [
+        { eventType: "DB_QUERY_ERROR", detailTemplate: "UNION SELECT attempt on table [{param}] — syntax error in WHERE clause" },
+        { eventType: "WAF_ALERT",      detailTemplate: "Blocked payload: ' OR 1=1; DROP TABLE {param};--" },
+        { eventType: "DB_ACCESS",      detailTemplate: "Repeated query to [{param}]: SELECT * FROM {param} WHERE id=1 UNION SELECT..." },
+        { eventType: "DB_ERROR",       detailTemplate: "Query from external IP to [{param}] — column count mismatch in UNION" },
+      ],
+    },
+    {
+      id: "brute-force",
+      label: "BRUTE FORCE LOGIN",
+      shortcut: "B",
+      prompt: "Enter target username:",
+      exampleParam: "admin",
+      logRows: [
+        { eventType: "AUTH_FAILURE",  detailTemplate: "Failed login attempt for user [{param}] — attempt 1 of many" },
+        { eventType: "AUTH_FAILURE",  detailTemplate: "Failed login attempt for user [{param}] — password incorrect" },
+        { eventType: "AUTH_FAILURE",  detailTemplate: "47 failed login attempts for [{param}] in 90 seconds from same IP" },
+        { eventType: "AUTH_LOCKOUT",  detailTemplate: "Account [{param}] temporarily locked — threshold exceeded" },
+      ],
+    },
+    {
+      id: "directory-traversal",
+      label: "DIRECTORY TRAVERSAL",
+      shortcut: "C",
+      prompt: "Enter target path:",
+      exampleParam: "/etc/passwd",
+      logRows: [
+        { eventType: "HTTP_403",      detailTemplate: "GET /../../../{param} — forbidden path traversal attempt" },
+        { eventType: "FILE_ACCESS",   detailTemplate: "Attempted read of {param} via traversal: ../../.." },
+        { eventType: "WAF_ALERT",     detailTemplate: "Traversal pattern detected in request path targeting [{param}]" },
+        { eventType: "HTTP_400",      detailTemplate: "Malformed path: /app/data/../../{param} — request rejected" },
+      ],
+    },
+  ],
+  noiseRows: [
+    { timestamp: "04:01:12", sourceIp: "10.0.1.5",   eventType: "HEALTH_CHECK",   details: "Automated health-check ping — status 200 OK" },
+    { timestamp: "04:03:44", sourceIp: "10.0.2.18",  eventType: "CDN_REQUEST",    details: "CDN cache refresh — static assets /dist/app.js" },
+    { timestamp: "04:07:22", sourceIp: "10.0.1.30",  eventType: "CRON_JOB",      details: "Scheduled backup task — /var/backup/nightly.tar.gz" },
+    { timestamp: "04:11:09", sourceIp: "10.0.0.1",   eventType: "DNS_QUERY",      details: "Standard DNS resolution — api.internal.corp" },
+    { timestamp: "04:15:55", sourceIp: "10.0.3.7",   eventType: "API_CALL",       details: "Developer API call — GET /v2/metrics — 200 OK" },
+    { timestamp: "04:19:33", sourceIp: "10.0.1.5",   eventType: "HEALTH_CHECK",   details: "Automated health-check ping — status 200 OK" },
+    { timestamp: "04:23:41", sourceIp: "10.0.2.99",  eventType: "LOG_ROTATE",     details: "System log rotation completed — /var/log/app.log" },
+    { timestamp: "04:27:08", sourceIp: "10.0.0.1",   eventType: "NTP_SYNC",       details: "Network time sync — offset 0.003s" },
+  ],
+  attackerIps: ["10.0.4.77", "10.0.4.33", "172.16.8.201", "192.168.50.12"],
+  flag: "FLAG{4tt4ck3r_m1nd53t}",
+  successMessage:
+    "Attack vector confirmed. You launched it — and you caught it. Attacker mindset logged to Signal Ghost dossier.",
+  hints: [
+    "The attacker's source IP appears in multiple log rows — look for the same IP in repeated entries.",
+    "The event type in the log rows will match the attack you chose — SQL, AUTH, or traversal patterns.",
+    "Your exact target parameter appears in the log details. Look for the value you entered in phase 1.",
+  ],
+};
+
+// ── LEVEL 8: SOC Triage ──────────────────────────────────────────────────────
+
+export const socTriageLevel: SocTriageLevelConfig = {
+  id: "soc-triage",
+  title: "Transmission Hotel",
+  mission:
+    "You are now in the Security Operations Centre. Eight alerts have fired. Your mission: classify each one as a real threat (ESCALATE) or a false positive (DISMISS). Six correct calls required to clear the queue and close the mission.",
+  alerts: [
+    {
+      id: "A1",
+      severity: "CRITICAL",
+      rule: "SQLI_UNION_SELECT",
+      sourceIp: "185.234.218.44",
+      payloadSnippet: "' UNION SELECT username,password FROM users--",
+      time: "04:12:08",
+      isThreat: true,
+      explanation: "Real SQL injection payload. The UNION SELECT pattern targets credential tables directly.",
+    },
+    {
+      id: "A2",
+      severity: "MEDIUM",
+      rule: "OUTBOUND_HTTP_NON_STANDARD_PORT",
+      sourceIp: "10.0.1.5",
+      payloadSnippet: "GET /health HTTP/1.1 — port 8443",
+      time: "04:14:22",
+      isThreat: false,
+      explanation: "CDN health-check on port 8443. Known internal IP, fixed schedule — false positive.",
+    },
+    {
+      id: "A3",
+      severity: "HIGH",
+      rule: "NMAP_SYN_SCAN",
+      sourceIp: "91.108.56.17",
+      payloadSnippet: "SYN packets to ports 22,80,443,3306,5432 — 400ms sweep",
+      time: "04:17:45",
+      isThreat: true,
+      explanation: "External IP performing a rapid SYN sweep across 5 ports. Classic Nmap reconnaissance.",
+    },
+    {
+      id: "A4",
+      severity: "HIGH",
+      rule: "AUTH_BYPASS_ATTEMPT",
+      sourceIp: "10.0.3.7",
+      payloadSnippet: "Authorization: Bearer admin-dev-key-7f3a",
+      time: "04:19:01",
+      isThreat: false,
+      explanation: "Developer API key containing 'admin' in name triggered the rule. Internal dev IP, legitimate traffic — false positive.",
+    },
+    {
+      id: "A5",
+      severity: "CRITICAL",
+      rule: "DNS_TUNNELING_DETECTED",
+      sourceIp: "10.0.2.44",
+      payloadSnippet: "TXT query: a9f3b.c2channel.badactor.net (entropy: 4.91)",
+      time: "04:22:37",
+      isThreat: true,
+      explanation: "High-entropy DNS TXT query to an unknown external domain. Classic DNS tunnelling C2 beacon signature.",
+    },
+    {
+      id: "A6",
+      severity: "MEDIUM",
+      rule: "INTERNAL_PORT_SCAN",
+      sourceIp: "10.0.0.50",
+      payloadSnippet: "ICMP + TCP probes to 10.0.0.0/24 — sequential sweep",
+      time: "04:25:14",
+      isThreat: false,
+      explanation: "10.0.0.50 is the registered IT asset scanner. This IP is whitelisted for scheduled weekly scans — false positive.",
+    },
+    {
+      id: "A7",
+      severity: "CRITICAL",
+      rule: "AUTH_FAILURE_THRESHOLD",
+      sourceIp: "203.0.113.42",
+      payloadSnippet: "47 failed logins for user 'root' in 90 seconds",
+      time: "04:28:59",
+      isThreat: true,
+      explanation: "47 failed root login attempts in 90 seconds from an external IP. Active brute-force attack.",
+    },
+    {
+      id: "A8",
+      severity: "LOW",
+      rule: "REPEATED_DB_QUERY",
+      sourceIp: "10.0.1.8",
+      payloadSnippet: "SELECT id,status FROM jobs WHERE status='pending' — every 60s",
+      time: "04:31:03",
+      isThreat: false,
+      explanation: "Cron job polling a jobs queue every 60 seconds. Same query, fixed interval, internal IP — false positive.",
+    },
+  ],
+  passingThreshold: 6,
+  flag: "FLAG{s0c_4n4lyst}",
+  successMessage:
+    "Alert queue cleared. Triage complete. Signal Ghost operation: MISSION ACCOMPLISHED.",
+  hints: [
+    "Check source IPs — internal IPs (10.x.x.x) are more likely to be false positives from known systems.",
+    "Look at the payload snippet carefully. Real attacks have recognisable patterns: SQL keywords, high-entropy strings, known scan signatures.",
+    "Scheduled and automated systems (cron jobs, health checks, asset scanners) generate legitimate alerts that look suspicious.",
+  ],
+};
+
 // ── Level map ────────────────────────────────────────────────────────────────
 
 export const gameplayLevels: GameplayLevelConfig[] = [
@@ -572,12 +791,14 @@ export const gameplayLevels: GameplayLevelConfig[] = [
   phishingInspectorLevel,
   networkDefenseLevel,
   terminalForensicsLevel,
+  dualRoleDefenderLevel,
+  socTriageLevel,
 ];
 
 // ── Transition beats between levels ─────────────────────────────────────────
 
 export const transitionBeats: Record<
-  Exclude<LevelId, "terminal-forensics">,
+  Exclude<LevelId, "terminal-forensics" | "dual-role-defender" | "soc-triage">,
   { lines: string[]; action: string }
 > = {
   "caesar-cipher": {
@@ -636,6 +857,8 @@ export const levelReadyStatuses: Record<LevelId, string> = {
   "phishing-inspector": "// DELTA CHANNEL OPEN -- INSPECT INTERCEPTED EMAILS",
   "network-defense": "// ECHO CHANNEL OPEN -- DEPLOY YOUR DEFENSES",
   "terminal-forensics": "// FOXTROT CHANNEL OPEN -- BEGIN FORENSIC INVESTIGATION",
+  "dual-role-defender": "// GOLF CHANNEL OPEN -- SELECT ATTACK VECTOR AND SWITCH SIDES",
+  "soc-triage": "// HOTEL CHANNEL OPEN -- TRIAGE THE ALERT QUEUE",
 };
 
 // ── Task IDs for telemetry ───────────────────────────────────────────────────
@@ -647,6 +870,8 @@ export const taskIds: Record<LevelId, string> = {
   "phishing-inspector": "email-inspection",
   "network-defense": "defense-deployment",
   "terminal-forensics": "forensic-investigation",
+  "dual-role-defender": "dual-role-simulation",
+  "soc-triage": "soc-triage",
 };
 
 // ── Codex entries ────────────────────────────────────────────────────────────
@@ -728,6 +953,32 @@ export const codexEntries: Record<CodexEntryId, CodexEntry> = {
     note: [
       "Logs are the primary evidence trail in incident response. Auth.log, system.log, and access.log each reveal different attack phases.",
       "Attackers often leave traces in .bash_history and newly created accounts. After containment, rotate all credentials and audit all user accounts.",
+    ],
+  },
+  "dual-role-defender": {
+    id: "dual-role-defender",
+    title: "Signal Log -- Entry 7",
+    method: "OFFENSIVE SECURITY / ATTACKER MINDSET",
+    analysis: [
+      "The Golf channel required simulating an active intrusion, then identifying that same attack in a noisy log stream.",
+      "SQL injection, brute-force, and directory traversal each produce distinct log signatures that are easy to spot once you know the pattern.",
+    ],
+    note: [
+      "Understanding how attacks work is the fastest path to detecting them. Defenders who have performed penetration testing catch attacks faster.",
+      "Every attack leaves traces. The key is knowing which log sources to check and which patterns to recognise.",
+    ],
+  },
+  "soc-triage": {
+    id: "soc-triage",
+    title: "Signal Log -- Entry 8",
+    method: "SECURITY OPERATIONS / ALERT TRIAGE",
+    analysis: [
+      "The Hotel channel simulated a Security Operations Centre alert queue requiring true/false-positive classification.",
+      "Alert fatigue — the tendency to dismiss alerts due to volume — is one of the leading causes of missed real threats.",
+    ],
+    note: [
+      "False positives waste analyst time and erode trust in the alerting system. Good tuning is as important as detection rules.",
+      "When triaging: check source IP reputation, correlate with known schedules, and look for attack-specific payload patterns before escalating or dismissing.",
     ],
   },
 };

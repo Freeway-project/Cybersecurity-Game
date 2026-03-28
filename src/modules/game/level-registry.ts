@@ -16,4 +16,6 @@ export const levelComponentMap: Record<LevelId, () => Promise<{ default: AnyLeve
   "phishing-inspector": () => import("@/modules/game/components/levels/phishing-inspector-level").then((m) => ({ default: m.PhishingInspectorLevel as AnyLevelComponent })),
   "network-defense":    () => import("@/modules/game/components/levels/network-defense-level").then((m) => ({ default: m.NetworkDefenseLevel as AnyLevelComponent })),
   "terminal-forensics": () => import("@/modules/game/components/levels/terminal-forensics-level").then((m) => ({ default: m.TerminalForensicsLevel as AnyLevelComponent })),
+  "dual-role-defender": () => import("@/modules/game/components/levels/dual-role-defender-level").then((m) => ({ default: m.DualRoleDefenderLevel as AnyLevelComponent })),
+  "soc-triage":         () => import("@/modules/game/components/levels/soc-triage-level").then((m) => ({ default: m.SocTriageLevel as AnyLevelComponent })),
 };

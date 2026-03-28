@@ -43,6 +43,8 @@ const reportLevelIds: LevelId[] = [
   "phishing-inspector",
   "network-defense",
   "terminal-forensics",
+  "dual-role-defender",
+  "soc-triage",
 ];
 
 const reportLevelPrefixes: Record<LevelId, string> = {
@@ -52,6 +54,8 @@ const reportLevelPrefixes: Record<LevelId, string> = {
   "phishing-inspector": "phishing",
   "network-defense": "networkDefense",
   "terminal-forensics": "terminalForensics",
+  "dual-role-defender": "dualRoleDefender",
+  "soc-triage": "socTriage",
 };
 
 export interface AdminAssessmentAnswerReport {
@@ -428,6 +432,8 @@ function buildAdminRows({
         "phishing-inspector": buildLevelReport(scopedEvents, "phishing-inspector", skippedLevels),
         "network-defense":    buildLevelReport(scopedEvents, "network-defense", skippedLevels),
         "terminal-forensics": buildLevelReport(scopedEvents, "terminal-forensics", skippedLevels),
+        "dual-role-defender": buildLevelReport(scopedEvents, "dual-role-defender", skippedLevels),
+        "soc-triage":         buildLevelReport(scopedEvents, "soc-triage", skippedLevels),
       } satisfies Record<LevelId, AdminLevelReport>;
 
       // Assessment step removed — scores always null

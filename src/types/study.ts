@@ -50,6 +50,8 @@ export const levelIds = [
   "phishing-inspector",
   "network-defense",
   "terminal-forensics",
+  "dual-role-defender",
+  "soc-triage",
 ] as const;
 
 export const codexEntryIds = [
@@ -59,6 +61,8 @@ export const codexEntryIds = [
   "phishing-inspector",
   "network-defense",
   "terminal-forensics",
+  "dual-role-defender",
+  "soc-triage",
 ] as const;
 
 export const deviceTypes = ["phone", "tablet", "laptop", "desktop", "unknown"] as const;

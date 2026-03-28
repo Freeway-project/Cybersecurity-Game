@@ -40,6 +40,8 @@ const levelLabels: Record<LevelId, string> = {
   "phishing-inspector": "Phishing inspector",
   "network-defense":    "Network defense",
   "terminal-forensics": "Terminal forensics",
+  "dual-role-defender": "Dual-role defender",
+  "soc-triage":         "SOC triage",
 };
 
 const reportLevelIds: LevelId[] = [
@@ -49,6 +51,8 @@ const reportLevelIds: LevelId[] = [
   "phishing-inspector",
   "network-defense",
   "terminal-forensics",
+  "dual-role-defender",
+  "soc-triage",
 ];
 
 function formatText(value: string | null | undefined, fallback = "Not recorded") {

@@ -18,6 +18,8 @@ import { BlockCipherLevel } from "@/modules/game/components/levels/block-cipher-
 import { PhishingInspectorLevel } from "@/modules/game/components/levels/phishing-inspector-level";
 import { NetworkDefenseLevel } from "@/modules/game/components/levels/network-defense-level";
 import { TerminalForensicsLevel } from "@/modules/game/components/levels/terminal-forensics-level";
+import { DualRoleDefenderLevel } from "@/modules/game/components/levels/dual-role-defender-level";
+import { SocTriageLevel } from "@/modules/game/components/levels/soc-triage-level";
 import { BreachOverlay } from "@/modules/game/components/ui/breach-overlay";
 import { FlagCapture } from "@/modules/game/components/ui/flag-capture";
 import { ScoreBar } from "@/modules/game/components/ui/score-bar";
@@ -43,11 +45,11 @@ const bootLines = [
   "> CONNECTING TO INTERCEPT ARRAY.............. OK",
   "> AUTHENTICATING ANALYST: CIPHER............. OK",
   "> THREAT DATABASE: LOADED",
-  "> TRANSMISSION QUEUE: 6 INTERCEPTS PENDING",
+  `> TRANSMISSION QUEUE: ${levelOrder.length} INTERCEPTS PENDING`,
   "",
   "// BRIEFING:",
   "// An unknown network has been transmitting on monitored frequencies.",
-  "// Six transmissions intercepted — some encoded, some threats, some traces.",
+  `// ${levelOrder.length} transmissions intercepted — some encoded, some threats, some traces.`,
   "// Your task: decode, detect, defend, investigate.",
   "// Method: classified. Work from what you have.",
 ];
@@ -376,6 +378,10 @@ export function GameplayExperience({
         return <NetworkDefenseLevel {...commonProps} onUnlockCodex={(id) => handleUnlockCodex(id)} />;
       case "terminal-forensics":
         return <TerminalForensicsLevel {...commonProps} onUnlockCodex={(id) => handleUnlockCodex(id)} />;
+      case "dual-role-defender":
+        return <DualRoleDefenderLevel {...commonProps} onUnlockCodex={(id) => handleUnlockCodex(id)} />;
+      case "soc-triage":
+        return <SocTriageLevel {...commonProps} onUnlockCodex={(id) => handleUnlockCodex(id)} />;
     }
   }
 
@@ -387,7 +393,7 @@ export function GameplayExperience({
         <div className="terminal-panel space-y-4">
           <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#4ade80]">// OPERATION SIGNAL GHOST -- COMPLETE</p>
           <div className="space-y-2 font-mono text-sm leading-7 text-[#d4a843]">
-            <p>// ALL 6 TRANSMISSIONS ANALYSED</p>
+            <p>// ALL {levelOrder.length} TRANSMISSIONS ANALYSED</p>
             <p>// TOTAL SCORE: {totalScore.toLocaleString()} / {totalMaxScore.toLocaleString()}</p>
             <p>// FLAGS CAPTURED: {flagsCaptured}/{levelOrder.length}</p>
             <p>// LOGGING TO SIGNAL LOG...</p>
@@ -436,10 +442,10 @@ export function GameplayExperience({
         )}
 
         {/* Transition beat */}
-        {phase === "transition" && currentLevelId && currentLevelId !== "terminal-forensics" && (
+        {phase === "transition" && currentLevelId && currentLevelId !== "terminal-forensics" && currentLevelId !== "dual-role-defender" && currentLevelId !== "soc-triage" && (
           <TransitionBeat
-            lines={transitionBeats[currentLevelId as Exclude<typeof currentLevelId, "terminal-forensics">].lines}
-            action={transitionBeats[currentLevelId as Exclude<typeof currentLevelId, "terminal-forensics">].action}
+            lines={transitionBeats[currentLevelId as Exclude<typeof currentLevelId, "terminal-forensics" | "dual-role-defender" | "soc-triage">].lines}
+            action={transitionBeats[currentLevelId as Exclude<typeof currentLevelId, "terminal-forensics" | "dual-role-defender" | "soc-triage">].action}
             onNext={advanceToNextLevel}
           />
         )}
@@ -538,6 +544,8 @@ function getLevelTitle(levelId: LevelId): string {
     "phishing-inspector": "Transmission Delta",
     "network-defense":    "Transmission Echo",
     "terminal-forensics": "Transmission Foxtrot",
+    "dual-role-defender": "Transmission Golf",
+    "soc-triage":         "Transmission Hotel",
   };
   return titles[levelId];
 }
@@ -573,6 +581,16 @@ function getLevelHints(levelId: LevelId): string[] {
       "Start with 'ls' to see the files, then 'cat auth.log' to begin your investigation.",
       "The auth.log shows login events — look for repeated failed attempts followed by a success from an unusual IP.",
       "Check the .bash_history file in the attacker's home directory — it shows every command they ran.",
+    ],
+    "dual-role-defender": [
+      "The attacker's source IP appears in multiple log rows — look for the same IP in repeated entries.",
+      "The event type in the log rows will match the attack you chose — SQL, AUTH, or traversal patterns.",
+      "Your exact target parameter appears in the log details. Look for the value you entered in phase 1.",
+    ],
+    "soc-triage": [
+      "Check source IPs — internal IPs (10.x.x.x) are more likely to be false positives from known systems.",
+      "Look at the payload snippet carefully. Real attacks have recognisable patterns: SQL keywords, high-entropy strings, known scan signatures.",
+      "Scheduled and automated systems (cron jobs, health checks, asset scanners) generate legitimate alerts that look suspicious.",
     ],
   };
   return hints[levelId];

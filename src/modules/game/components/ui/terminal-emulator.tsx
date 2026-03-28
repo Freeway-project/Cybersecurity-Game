@@ -14,11 +14,12 @@ interface Props {
   onCommand?: (cmd: string, args: string[]) => void;
 }
 
-// Build a lookup map from file paths
+// Build a lookup map from file paths — normalise all paths to have a leading /
 function buildFsMap(files: VirtualFile[]): Map<string, string> {
   const map = new Map<string, string>();
   for (const f of files) {
-    map.set(f.path, f.content);
+    const key = f.path.startsWith("/") ? f.path : `/${f.path}`;
+    map.set(key, f.content);
   }
   return map;
 }

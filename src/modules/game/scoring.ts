@@ -7,6 +7,8 @@ export const levelMaxScores: Record<string, number> = {
   "phishing-inspector": 1000,
   "network-defense": 1200,
   "terminal-forensics": 1000,
+  "dual-role-defender": 1100,
+  "soc-triage": 1200,
 };
 
 export const levelTargetDurations: Record<string, number> = {
@@ -16,6 +18,8 @@ export const levelTargetDurations: Record<string, number> = {
   "phishing-inspector": 180_000,
   "network-defense": 180_000,
   "terminal-forensics": 240_000,
+  "dual-role-defender": 240_000,
+  "soc-triage": 300_000,
 };
 
 export function calculateLevelScore(config: {
