@@ -3,6 +3,8 @@ import { SiteShell } from "@/components/layout/site-shell";
 import { AdminConsole } from "@/modules/admin/components/admin-console";
 import { getAdminOverview } from "@/modules/admin/server";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminPage() {
   let overview = null;
   let adminError: string | null = null;
